@@ -4,6 +4,7 @@ import sys
 from PyQt6.uic import loadUi
 from PyQt6.QtWidgets import QApplication, QDialog, QTableWidget, QTableWidgetItem, QPushButton
 from PyQt6.QtCore import Qt
+from src.gui.libGui import messageBox
 import pandas as pd
 from collections import namedtuple
 
@@ -38,7 +39,7 @@ class EditScheme(QDialog):
         self.btn_copy_scheme.clicked.connect(self.copyJobs)
         self.btn_remove_from_current.clicked.connect(self.removeJobs)
         self.buttonBox.accepted.connect(self.transferTable)
-       
+        self.buttonBox.rejected.connect(self.handleRejected)
         
         if isinstance(inputScheme, str):
             print("reading: ",inputScheme)
@@ -156,7 +157,6 @@ class EditScheme(QDialog):
         for row in range(self.table_scheme_current.rowCount()):
             if self.table_scheme_current.item(row, 0).checkState() == Qt.CheckState.Checked:
                 rows_to_remove.append(row)
-
         # Remove rows in reverse order to avoid index shifting
         for row in reversed(rows_to_remove):
             self.table_scheme_current.removeRow(row)
@@ -164,22 +164,30 @@ class EditScheme(QDialog):
         
     def transferTable(self):
         
-        Node = namedtuple('Node', ['type', 'tag', 'inputType', 'inputTag'])
-        nodes = []
-        for row in range(self.table_scheme_current.rowCount()):
-            jobType = self.table_scheme_current.item(row, 1).text()
-            jobTag = (self.table_scheme_current.item(row, 2) or QTableWidgetItem()).text() or None
-            inputJobType = (self.table_scheme_current.item(row, 3) or QTableWidgetItem()).text() or None
-            inputJobTag = (self.table_scheme_current.item(row, 4) or QTableWidgetItem()).text() or None
-            oneNode = Node(type=jobType, tag=jobTag, inputType=inputJobType, inputTag=inputJobTag)
-            nodes.append(oneNode)
-        nodes_dict = {i: node for i, node in enumerate(nodes)}   
-        nodes_df = pd.DataFrame.from_dict(nodes_dict, orient='index')
-        schemeAdapted=self.scheme.filterSchemeByNodes(nodes_df, filterMode="Tag")
-        self.schemeAdapted=schemeAdapted
-        
-        return schemeAdapted
-    
+        if self.table_scheme_current.rowCount() > 0:
+            Node = namedtuple('Node', ['type', 'tag', 'inputType', 'inputTag'])
+            nodes = []
+            for row in range(self.table_scheme_current.rowCount()):
+                jobType = self.table_scheme_current.item(row, 1).text()
+                jobTag = (self.table_scheme_current.item(row, 2) or QTableWidgetItem()).text() or None
+                inputJobType = (self.table_scheme_current.item(row, 3) or QTableWidgetItem()).text() or None
+                inputJobTag = (self.table_scheme_current.item(row, 4) or QTableWidgetItem()).text() or None
+                oneNode = Node(type=jobType, tag=jobTag, inputType=inputJobType, inputTag=inputJobTag)
+                nodes.append(oneNode)
+            nodes_dict = {i: node for i, node in enumerate(nodes)}   
+            nodes_df = pd.DataFrame.from_dict(nodes_dict, orient='index')
+            schemeAdapted=self.scheme.filterSchemeByNodes(nodes_df, filterMode="Tag")
+            self.schemeAdapted=schemeAdapted
+            self.accept()  # Close the dialog and return the adapted scheme
+        else:
+            messageBox(title="No jobs selected", text="Please select at least one job to transfer.")
+            print("No jobs selected for transfer.")
+            
+           
+    def handleRejected(self):
+        self.schemeAdapted = None
+        self.reject()
+                
     def getResult(self):
         return self.schemeAdapted
 

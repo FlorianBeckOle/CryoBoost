@@ -213,10 +213,19 @@ class MainUI(QMainWindow):
         self.tabWidget.setTabVisible(1,True)
         
         if ((self.check_edit_scheme.isChecked()) and (self.cbdat.args.autoGen == False) and (self.cbdat.args.skipSchemeEdit == False)):
-            dialog=EditScheme(self.cbdat.scheme)
-            res=dialog.exec()
-            self.cbdat.scheme = dialog.getResult()
-            self.genSchemeTable()      
+            try:
+                dialog=EditScheme(self.cbdat.scheme)
+                res=dialog.exec()
+                newScheme=dialog.getResult()
+                if newScheme is not None:
+                    self.cbdat.scheme = newScheme
+                else:
+                    return        
+                self.genSchemeTable()
+            except Exception as e:
+                messageBox(title="Error", text="Error while editing scheme")
+                print(e)
+                return
         else:
             pass
             # inputNodes,inputNodes_df=get_inputNodesFromSchemeTable(self.table_scheme,jobsOnly=True)
