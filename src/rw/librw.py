@@ -1037,8 +1037,10 @@ class schemeMeta:
     row_index = df.index[ind]
     # inputType=os.path.basename(os.path.dirname(df.loc[row_index, "rlnJobOptionValue"].item()))
     inputParamName=df.loc[row_index, "rlnJobOptionVariable"].item()
-    
-    return inputParamName
+    inputParamValue=df.loc[row_index, "rlnJobOptionValue"].item()
+    scName=self.scheme_star.dict['scheme_general']['rlnSchemeName']
+    inutJobType=os.path.dirname(inputParamValue.split(scName)[1])
+    return inputParamName,inputParamValue,inutJobType
   
   def addParticleJobs(self,tags):
     particleJobs=self.conf.confdata['computing']['JOBTypesApplication']['ParticleJobs']

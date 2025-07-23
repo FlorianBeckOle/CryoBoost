@@ -133,13 +133,16 @@ class pipe:
         if job=="importmovies" and count==1: #first job for every pipeline
             command=command.replace("--addJobOptions XXXJobOptionsXXX",'')
         if count > 1: #output of previous job is input for next job
-            inputParamName=self.scheme.getMajorInputParamNameFromJob(job)
+            inputParamName,inputParamValue,inputParamJobType=self.scheme.getMajorInputParamNameFromJob(job)
             if "denoisepredict" in job:# needs additional job options
                 updateField="'" + inputParamName + " == " + fullOutputName[-2] 
                 fpModel=os.path.dirname(fullOutputName[-1]) + os.path.sep + "denoising_model.tar.gz"
                 updateField += ";care_denoising_model == " + fpModel + "'"
             else:
-                updateField="'" + inputParamName + " == " + fullOutputName[-1] + "'"
+                lastJob=self.getLastJobOfType(inputParamJobType,fullOutputName)
+                updateField="'" + inputParamName + " == " + lastJob + "'"
+                #updateField="'" + inputParamName + " == " + fullOutputName[-1] + "'"
+
             command=command.replace("XXXJobOptionsXXX",updateField)
              
         alias=job+str(count)
@@ -167,6 +170,21 @@ class pipe:
         fullOutputName.append(outpuFold + os.path.sep + outputName)
         
         count+=1
+  def getLastJobOfType(self,jobType,listOfJobs):
+    """
+    Get the last job of a specific type from a list of jobs.
+
+    Args:
+        jobType (str): The type of job to search for.
+        listOfJobs (list): A list of job names.
+
+    Returns:
+        str: The name of the last job of the specified type, or None if not found.
+    """
+    for job in listOfJobs:
+        if jobType in job:
+            return job
+    return None
         
     
   def runSchemeSync(self):
