@@ -138,6 +138,12 @@ class tsAlignment(warpWrapperBase):
                     stTilt.df.at[position,'rlnTomoXShiftAngst']=aln[index,3]*pixSA
                     stTilt.df.at[position,'rlnTomoYShiftAngst']=aln[index,4]*pixSA
                 stTilt.writeStar(self.args.out_dir+"/tilt_series/"+tsID+".star")
+        
+        if len(tsIDAlgFaild)==len(self.st.tilt_series_df.rlnTomoTiltSeriesStarFile):
+            print("Error: Alignment failed for all tilt series, check log files")
+            print("Check:" + self.args.out_dir + "/warp_tiltseries/logs/")
+            raise Exception("Alignment failed for all tilt series, check log files ")
+        
             
         stTomo=starFileMeta(self.args.in_mics)
         stTomo.df['rlnTomoSizeX']=int(self.args.tomo_dimensions.split("x")[0])
