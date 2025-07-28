@@ -123,6 +123,7 @@ class BatchViewer:
             mdoc=mdocMeta(mdocWk)
             mdoc.filterByTiltSeriesStarFile(outputFolder+"tiltseries_filtered.star")
             print("  filtered mdoc has " + str(len(mdoc.all_df)) + " tilts")
+            print("  writing mdoc to " + outputFolder+"/mdoc")
             mdoc.writeAllMdoc(outputFolder+"/mdoc")    
         
 

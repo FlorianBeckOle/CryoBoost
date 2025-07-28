@@ -36,27 +36,32 @@ def filterTitls(tilseriesStar,relionProj='',pramRuleFilter=None,model=None,plot=
     meanAngGood=ts.all_tilts_df[ts.all_tilts_df.cryoBoostDlLabel == "good"].rlnTomoNominalStageTiltAngle.abs().mean()
     if np.isnan(meanAngBad):
         meanAngBad=float(180)
+    badFract=round((bad_count/lenUnfilterd)*100,1)
         
     ts.writeTiltSeries(outputFolder+"tiltseries_labeled.star","tilt_seriesLabel")
     
     filterParams = {"cryoBoostDlLabel": ("good")}
     ts.filterTilts(filterParams)
     ts.writeTiltSeries(outputFolder+"tiltseries_filtered.star")
-
     preExpFolder=os.path.dirname(tilseriesStar)
+    
     if os.path.exists(preExpFolder+"/warp_frameseries.settings"):
         print("Warp frame alignment detected ...getting data from: " + preExpFolder)
         getDataFromPreExperiment(preExpFolder,outputFolder)
         os.makedirs(outputFolder+"/mdoc", exist_ok=True)    
-        print("  filtering mdocs: " + mdocWk)
-        mdocWk=os.path.dirname(mdocWk) + os.path.sep + "*.mdoc"
-        mdoc=mdocMeta(mdocWk)
-        mdoc.filterByTiltSeriesStarFile(outputFolder+"tiltseries_filtered.star")
-        print("  filtered mdoc has " + str(len(mdoc.all_df)) + " tilts")
-        mdoc.writeAllMdoc(outputFolder+"/mdoc")    
-    
-    
-    if (meanProb<0.95) or (meanAngGood>(meanAngBad-2)):
+        if (len(ts.tilt_series_df)>0):
+            print("  filtering mdocs: " + mdocWk)
+            mdocWk=os.path.dirname(mdocWk) + os.path.sep + "*.mdoc"
+            mdoc=mdocMeta(mdocWk)
+            mdoc.filterByTiltSeriesStarFile(outputFolder+"tiltseries_filtered.star")
+            print("  filtered mdoc has " + str(len(mdoc.all_df)) + " tilts")
+            mdoc.writeAllMdoc(outputFolder+"/mdoc")    
+        else:
+            badFract=100
+            print("All tilts are bad, no output written")
+            print("Maual sortinign will be started")
+
+    if (meanProb<0.95) or (meanAngGood>(meanAngBad-2)) or (badFract>50):
         print("WARNINIG data out of distribution you should sort manual")
         with open(outputFolder+'DATA_OUT_OF_DISTRIBUTION', 'w') as f:
             pass
@@ -64,7 +69,7 @@ def filterTitls(tilseriesStar,relionProj='',pramRuleFilter=None,model=None,plot=
         print("Removal of bad tilts successful")
         with open(outputFolder+'DATA_IN_DISTRIBUTION', 'w') as f:
             pass
-    badFract=round((bad_count/lenUnfilterd)*100,1)        
+            
     print("  Average Prediction Probability: " + str(round(meanProb,2)) + " (should be > 0.95)")
     print("  Percentage of bad tilts: " + str(badFract) + "%")
     meanAngBad="n.d" if int(meanAngBad) == 180 else str(round(meanAngBad,1))
