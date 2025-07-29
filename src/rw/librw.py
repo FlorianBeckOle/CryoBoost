@@ -989,10 +989,14 @@ class schemeMeta:
     Node = namedtuple('Node', ['type', 'tag', 'inputType', 'inputTag'])
     nodes = []
     intag=None
+    all_types=[]
     for job in jobList:
       inputType=self.getInputJobType(job)
+      if inputType is not None and inputType not in all_types and len(all_types)>0:
+          inputType =all_types[-1]
       oneNode = Node(type=job, tag=tag, inputType=inputType, inputTag=intag)
       nodes.append(oneNode)
+      all_types.append(job)
       intag=tag
     nodes_dict = {i: node for i, node in enumerate(nodes)}   
     #nodes_dict = {i: row.to_dict() for i, row in nodes.iterrows()}
@@ -1041,6 +1045,34 @@ class schemeMeta:
     scName=self.scheme_star.dict['scheme_general']['rlnSchemeName']
     inutJobType=os.path.dirname(inputParamValue.split(scName)[1])
     return inputParamName,inputParamValue,inutJobType
+  
+  def removeParticleJobs(self):
+    """
+    Removes particle jobs from the scheme.
+    
+    Returns:
+        schemeAdapted (schemeMeta): A new schemeMeta object with particle jobs removed.
+    """
+    particleJobs=self.conf.confdata['computing']['JOBTypesApplication']['ParticleJobs']
+    nonParticleJobs=[job for job in self.jobs_in_scheme if job not in set(particleJobs)]
+    nodes,nodes_df=self.jobListToNodeList(nonParticleJobs)
+    
+    schemeAdapted=self.filterSchemeByNodes(nodes_df)
+    return schemeAdapted
+  
+  def removefilterTiltsJobs(self):
+    """
+    Removes filter jobs from the scheme.
+    
+    Returns:
+        schemeAdapted (schemeMeta): A new schemeMeta object with filter jobs removed.
+    """
+    filterJobs=self.conf.confdata['computing']['JOBTypesApplication']['FilterTiltsJobs']
+    nonFilterJobs=[job for job in self.jobs_in_scheme if job not in set(filterJobs)]
+    nodes,nodes_df=self.jobListToNodeList(nonFilterJobs)
+    
+    schemeAdapted=self.filterSchemeByNodes(nodes_df)
+    return schemeAdapted
   
   def addParticleJobs(self,tags):
     particleJobs=self.conf.confdata['computing']['JOBTypesApplication']['ParticleJobs']

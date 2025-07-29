@@ -15,6 +15,7 @@ from src.gui.libGui import MultiInputDialog,statusMessageBox
 from src.misc.libmask import genMaskRelion,caclThreshold
 from src.rw.librw import schemeMeta,cbconfig,read_mdoc,importFolderBySymlink
 from src.gui.edit_scheme import EditScheme
+from src.gui.quick_setup import quickSetup
 from src.gui.generateTemplate import TemplateGen
 from src.misc.libimVol import processVolume
 from src.misc.eerSampling import get_EERsections_per_frame
@@ -43,10 +44,13 @@ class MainUI(QMainWindow):
        
         self.system=self.selSystemComponents()
         self.cbdat=self.initializeDataStrcuture(args)
+        if (self.cbdat is None):
+            QApplication.instance().quit()
+            sys.exit()
+            return
         self.setCallbacks()
         self.adaptWidgetsToJobsInScheme()
         self.genSchemeTable()
-        
         
         self.groupBox_WorkFlow.setEnabled(False)
         self.groupBox_Setup.setEnabled(False)
@@ -77,6 +81,15 @@ class MainUI(QMainWindow):
         #custom varibales
         cbdat = type('', (), {})() 
         cbdat.CRYOBOOST_HOME=os.getenv("CRYOBOOST_HOME")
+        if args.numInputArgs > -1:
+            dialog = quickSetup(args)
+            res=dialog.exec()
+            args=dialog.getResult()
+            if args is None:
+                print("cancelled quick setup")
+                cbdat= None
+                return cbdat
+            
         if args.scheme=="gui":
             args.scheme=get_user_selection()
         if args.scheme=="relion_tomo_prep" or args.scheme=="default":      
@@ -108,12 +121,16 @@ class MainUI(QMainWindow):
             cbdat.filtScheme=0
         else:    
             cbdat.scheme=schemeMeta(cbdat.defaultSchemePath)
-            
             if args.Noise2Noise == "False":
                 cbdat.scheme=cbdat.scheme.removeNoiseToNoiseFilter()
-            if args.species != "noTag":
+            if args.FilterTilts == "False":
+                cbdat.scheme=cbdat.scheme.removefilterTiltsJobs()
+            if args.species != "noTag" and args.species != "None":
                 speciesList = [x.strip() for x in args.species.split(',')]
-                cbdat.scheme=cbdat.scheme.addParticleJobs(speciesList)    
+                cbdat.scheme=cbdat.scheme.addParticleJobs(speciesList) 
+            if args.species == "None":
+                cbdat.scheme=cbdat.scheme.removeParticleJobs()
+                   
         
         return cbdat
     

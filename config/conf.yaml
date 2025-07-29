@@ -153,9 +153,12 @@ computing:
         - tmextractcand
         - subtomoExtraction
       Noise2NoiseFilterJobs:
-       - denoisetrain
-       - denoisepredict  
-    
+        - denoisetrain
+        - denoisepredict  
+      FilterTiltsJobs:
+        - filtertilts
+        - filtertiltsInter
+
   JOBMaxNodes:
         motioncorr:
          - 4          
