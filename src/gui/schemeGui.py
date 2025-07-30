@@ -281,7 +281,8 @@ class MainUI(QMainWindow):
             #params_dict = {"generate_split_tomograms": "Yes" }
             #self.setParamsDictToJobTap(params_dict)
         self.loadConfig()
-   
+        self.btn_makeJobTabs.setEnabled(False)
+        
     def genParticleSetups(self):
         
         self.jobTapNrSetUpTaps=1
@@ -1560,6 +1561,9 @@ class MainUI(QMainWindow):
     
     def scheduleJobs(self):
         
+        if self.checkPipeRunner()==False:
+            return
+        
         self.cbdat.pipeRunner.scheduleJobs()
         
     def openRelionGui(self):
@@ -1681,6 +1685,7 @@ class MainUI(QMainWindow):
         self.textBrowser_workFlow.moveCursor(QTextCursor.MoveOperation.End)    
         
         logOut,logError=self.cbdat.pipeRunner.getLastJobLogs()
+       
         
         try:
             log_contentOut=[]

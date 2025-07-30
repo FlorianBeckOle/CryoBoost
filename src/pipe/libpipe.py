@@ -42,6 +42,7 @@ class pipe:
     schemeLockFile=".relion_lock_scheme_" + schemeName + os.path.sep  + "lock_scheme"
     relSchemeStart="export TERM=xterm;(relion_schemer --scheme " + schemeName  + ' --run --verb 2 & pid=\$!; echo \$pid  > Schemes/'+ schemeName + '/scheme.pid)' # working
     relScheduleJob="relion_pipeliner --addJobFromStar XXXJobStarXXX --setJobAlias XXXAliasXXX --addJobOptions XXXJobOptionsXXX"
+    
     #relSchemeStart="export TERM=xterm;{relion_schemer --scheme " + schemeName  + ' --run --verb 2 & pid=\$!; echo \$pid  > Schemes/'+ schemeName + '/scheme.pid}' 
     #relSchemeStart="export TERM=xterm;relion_schemer --scheme " + schemeName  + ' --run --verb 2 & pid=\$!; echo \$pid  > Schemes/'+ schemeName + '/scheme.pid'
     #relSchemeStart = "export TERM=xterm; { relion_schemer --scheme " + schemeName + " --run --verb 2 & pid=$!; echo $pid > Schemes/" + schemeName + "/scheme.pid; }"
@@ -107,6 +108,17 @@ class pipe:
      self.scheme.write_scheme(path_scheme)
      self.scheme.schemeFilePath=path_scheme + "/scheme.star"
   
+  def initRelionProject(self):
+    command=self.commandGui #.replace("--do_projdir","--do_projdir --idle 0")
+    run_command_async(command)
+    # pipeFile=self.pathProject+ os.path.sep+"default_pipeline.star"
+    # if not os.path.isfile(pipeFile):
+    #     with open(pipeFile, "w") as myfile:
+    #       myfile.write("\n")
+    #       myfile.write("data_pipeline_general\n")
+    #       myfile.write("\n")
+    #       myfile.write("_rlnPipeLineJobCounter\n")
+    #       myfile.write("\n")
   def runScheme(self):
     
     self.generatCrJobLog("manageWorkflow","starting workflow:" + "\n")
@@ -118,11 +130,15 @@ class pipe:
     #TODO check for alias check for scheduled jobs
     #TODO check running schedule
     
+    self.initRelionProject()
+    self.writeToLog(" + Schedule Jobs: --> Logs/scheduleJobs" "\n")
     path_scheme = self.scheme.schemeFolderPath
     path_schemeRel = "Schemes/" + path_scheme.split("/Schemes/")[1]
     defPipePath=self.pathProject+os.path.sep+"default_pipeline.star"
     count=1
     fullOutputName=[]
+    self.generatCrJobLog("scheduleJobs","scheduling " + str(len(self.scheme.jobs_in_scheme)) + " jobs:" + "\n")
+    
     for job in self.scheme.jobs_in_scheme:
 
         jobpath=os.path.join(path_schemeRel, job, "job.star")
@@ -141,8 +157,8 @@ class pipe:
             else:
                 lastJob=self.getLastJobOfType(inputParamJobType,fullOutputName)
                 updateField="'" + inputParamName + " == " + lastJob + "'"
-                #updateField="'" + inputParamName + " == " + fullOutputName[-1] + "'"
-
+               
+        
             command=command.replace("XXXJobOptionsXXX",updateField)
              
         alias=job+str(count)
@@ -160,9 +176,11 @@ class pipe:
         df=st.dict["pipeline_processes"]
         lf=df[df['rlnPipeLineProcessAlias'].str.contains(alias, na=False)]
         if lf.empty:
+            self.generatCrJobLog("scheduleJobs","Error: no job found with alias: " + alias + "\n",type="err")
             print("Error: no job found with alias: " + alias)
             break
         else:
+            self.generatCrJobLog("scheduleJobs"," -->job: " + job + " alias: " + alias + "\n")
             print("Scheduled job: " + job + " with alias: " + alias)  
           
         outpuFold=lf['rlnPipeLineProcessAlias'].values[0]
@@ -360,11 +378,17 @@ class pipe:
   def generatCrJobLog(self,jobName,text,type="out"):
       
       os.makedirs(self.pathProject + "/Logs/" + jobName,exist_ok=True)
-      logFile=self.pathProject+ "/Logs/" + jobName+ "/run.out"
-     
-      with open(logFile, "a") as myfile:
+      if type=="out":
+        logFile=self.pathProject+ "/Logs/" + jobName+ "/run.out"
+        with open(logFile, "a") as myfile:
+          myfile.write(text)
+      if type=="err":  
+        logFile=self.pathProject+ "/Logs/" + jobName+ "/run.err"
+        with open(logFile, "a") as myfile:
           myfile.write(text)
       
       logFile=self.pathProject+ "/Logs/" + jobName+ "/run.err"
-      with open(logFile, "a") as myfile:
-        pass            
+      if not os.path.isfile(logFile):
+        with open(logFile, "a") as myfile:
+          pass
+                    
