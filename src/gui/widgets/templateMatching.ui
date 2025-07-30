@@ -325,6 +325,9 @@
      </property>
     </widget>
     <widget class="QLineEdit" name="line_path_tm_SearchVolMaskFold">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="geometry">
       <rect>
        <x>311</x>
@@ -338,6 +341,9 @@
      </property>
     </widget>
     <widget class="QPushButton" name="btn_browse_tm_SearchVolMaskFold">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="geometry">
       <rect>
        <x>665</x>

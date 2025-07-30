@@ -88,6 +88,9 @@
      </property>
     </widget>
     <widget class="QLineEdit" name="line_path_ce_maskFold">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="geometry">
       <rect>
        <x>79</x>
@@ -101,6 +104,9 @@
      </property>
     </widget>
     <widget class="QPushButton" name="btn_browse_ce_maskFold">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="geometry">
       <rect>
        <x>430</x>
