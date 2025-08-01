@@ -16,7 +16,7 @@ def run_wrapperCommand(command,tag=None,relionProj=None,filterOuputFlag=None):
     """
     command_string = shlex.join(command)
     print(command_string)
-    print("launching ...")
+    print("launching waitbar will be updated in stpes of 10%")
     print(" ")
     
     sys.stdout.flush()
@@ -41,9 +41,9 @@ def run_wrapperCommand(command,tag=None,relionProj=None,filterOuputFlag=None):
            
             
             count100=0
+            last_printed_percentage = -1
             while process.poll() is None:
                 readable, _, _ = select.select([process.stdout, process.stderr], [], [], 0.1)
-                last_printed_percentage = 0
                 for stream in readable:
                     line = stream.readline()
                     if line:
@@ -52,7 +52,10 @@ def run_wrapperCommand(command,tag=None,relionProj=None,filterOuputFlag=None):
                             match = progress_pattern.search(line)
                             if match:
                                 current_percentage = int(match.group(1)) if match.groups() else 0
-                                if abs(current_percentage - last_printed_percentage) >= 10 and count100==0:
+                                current_bracket = current_percentage // 10  # Get the current 10% bracket
+                                last_bracket = last_printed_percentage // 10  # Get the last printed bracket
+                                
+                                if current_bracket > last_bracket and count100 == 0:
                                     line = line.replace('\r', '')
                                     line = line.replace('\n', '')
                                     line = re.sub(r'\x1B\[[0-9;]*[a-zA-Z]', '', line)
