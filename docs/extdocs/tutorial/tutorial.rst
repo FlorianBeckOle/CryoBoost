@@ -112,7 +112,10 @@ Start WorkFlow
 Check Results
 =============
 
+Tomograms:
+imod External/job007/warp_tiltseries/reconstruction/deconv/Position_1_11.80Apx.mrc
 
+.. image:: img/tomogramWarpDeconv.png
 
 
 Processing Copia
@@ -138,7 +141,7 @@ Class3d
 ++++++++++++++++++++++
 
 generate a starting model good enough for mask creation
-"one class classification is just faster for that purpose"
+"one class classification is just faster and more stable for that purpose"
 
 .. code-block:: bash
    
@@ -149,6 +152,7 @@ generate a starting model good enough for mask creation
    Number of classes: 1
    Number of Iterations: 15
    Mask Diameter: 575
+   Angular Sampling Interval: 3.75
    Pre-read all particles into RAM: yes
    Use GPU acceleration: yes
    Submit to queue: yes
@@ -186,13 +190,18 @@ Refine3d
 
 .. code-block:: bash
    
-   Input Optimisation Set Extract/job012/optimisation_set.star
+   #Local Refinement 1.8 deg of inital one class alingment
+   Input Optimisation Set Class3D/job017/optimisation_set.star
    Reference Map:  Class3D/job017/run_it015_class001.mrc
    Reference Mask: MaskCreate/job018/mask.mrc 
    Mask Diameter: 575
-   Initial Lowpass Filter: 40
+   RefereceMap is on absolut grayscale: Yes
+   Initial Lowpass Filter: 16
    Symmetry: I1
    Use solvent flattenned FSC: yes
+   Inital angluar sampling: 1.8
+   Inital offset range: 2
+   Local searches from auto-sampling: 1.8
    Pre-read all particles into RAM: yes
    Use GPU acceleration: yes
    Submit to queue: yes

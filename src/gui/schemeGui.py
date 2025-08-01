@@ -81,7 +81,14 @@ class MainUI(QMainWindow):
         #custom varibales
         cbdat = type('', (), {})() 
         cbdat.CRYOBOOST_HOME=os.getenv("CRYOBOOST_HOME")
-        if args.numInputArgs > -1:
+        warpSchemeExists=os.path.exists(str(args.proj) +  "/Schemes/" + "warp_tomo_prep" + "/scheme.star")
+        relioSchemeExists=os.path.exists(str(args.proj) +  "/Schemes/" + "relion_tomo_prep" + "/scheme.star")
+        if relioSchemeExists:
+            args.scheme="relion_tomo_prep"
+        if warpSchemeExists:
+            args.scheme="warp_tomo_prep"
+        
+        if args.numInputArgs > -1 and not (warpSchemeExists or relioSchemeExists):
             dialog = quickSetup(args)
             res=dialog.exec()
             args=dialog.getResult()
