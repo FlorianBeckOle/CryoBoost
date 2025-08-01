@@ -1,10 +1,10 @@
 # %%
 
-import subprocess,os,getpass,sys,shlex,time
+import subprocess,os,sys,re,getpass,sys,shlex,time
 from src.rw.librw import cbconfig,starFileMeta
+import select
 
-
-def run_wrapperCommand(command,tag=None,relionProj=None):
+def run_wrapperCommand(command,tag=None,relionProj=None,filterOuputFlag=None):
     """
     Run a command and return 0/1 for working non working
 
@@ -16,10 +16,71 @@ def run_wrapperCommand(command,tag=None,relionProj=None):
     """
     command_string = shlex.join(command)
     print(command_string)
+    print("launching ...")
+    print(" ")
+    
     sys.stdout.flush()
         
     try:
-        result = subprocess.run(command, check=True) #, capture_output=True, text=True)          
+        if filterOuputFlag is None:
+            result = subprocess.run(command, check=True) #, capture_output=True, text=True) 
+        else:
+            process = subprocess.Popen(
+                command_string,
+                shell=True,
+                executable="/bin/bash",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1  # Line buffered
+            )
+            stdout_fd = process.stdout.fileno()
+            stderr_fd = process.stderr.fileno()
+            os.set_blocking(stdout_fd, False)
+            os.set_blocking(stderr_fd, False)
+           
+            
+            count100=0
+            while process.poll() is None:
+                readable, _, _ = select.select([process.stdout, process.stderr], [], [], 0.1)
+                last_printed_percentage = 0
+                for stream in readable:
+                    line = stream.readline()
+                    if line:
+                        if stream == process.stderr:
+                            progress_pattern = re.compile(r'^\s*(\d+)%\|[^|]*\|')
+                            match = progress_pattern.search(line)
+                            if match:
+                                current_percentage = int(match.group(1)) if match.groups() else 0
+                                if abs(current_percentage - last_printed_percentage) >= 10 and count100==0:
+                                    line = line.replace('\r', '')
+                                    line = line.replace('\n', '')
+                                    line = re.sub(r'\x1B\[[0-9;]*[a-zA-Z]', '', line)
+                                    line = re.sub(r'█', '#', line)  # Full block
+                                    line = re.sub(r'▏|▎|▍|▌|▋|▊|▉', '=', line)  # Partial blocks
+                                    line = re.sub(r'M-bM-\^VM-\^H', '#', line)  # Meta sequences
+                                    print(f"\rProgress on one device: {line}", end='', file=sys.stdout, flush=True)
+                                    last_printed_percentage = current_percentage
+                                if current_percentage == 100 and count100==0:
+                                    print("\n", end='', file=sys.stdout, flush=True)
+                                    count100=1 
+                                if current_percentage < 10:
+                                    #reset for second waibar
+                                    count100=0 
+                                       
+                            else:    
+                                if len(line.strip()) > 0:
+                                    print(line,end='',file=sys.stderr, flush=True)
+                                    sys.stderr.flush()
+                        else:
+                            
+                            if filterOuputFlag == "pytomTM" and line.startswith("Progress job_"):
+                               pass 
+                            else:
+                                print(line,end='', flush=True)
+
+            process.wait()
+            result = process
     except subprocess.CalledProcessError as e:
         print(tag," error",file=sys.stderr)
         error_output = e.stderr if e.stderr else str(e)

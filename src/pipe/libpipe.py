@@ -111,14 +111,7 @@ class pipe:
   def initRelionProject(self):
     command=self.commandGui #.replace("--do_projdir","--do_projdir --idle 0")
     run_command_async(command)
-    # pipeFile=self.pathProject+ os.path.sep+"default_pipeline.star"
-    # if not os.path.isfile(pipeFile):
-    #     with open(pipeFile, "w") as myfile:
-    #       myfile.write("\n")
-    #       myfile.write("data_pipeline_general\n")
-    #       myfile.write("\n")
-    #       myfile.write("_rlnPipeLineJobCounter\n")
-    #       myfile.write("\n")
+    
   def runScheme(self):
     
     self.generatCrJobLog("manageWorkflow","starting workflow:" + "\n")

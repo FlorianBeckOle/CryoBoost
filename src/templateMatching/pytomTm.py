@@ -90,7 +90,8 @@ class pytomTm(templateMatchingWrapperBase):
                     command.extend(["--dose-accumulation",self.args.out_dir+"/doseFiles/"+tomoName+".txt",])
            
             command.extend(constParams)
-            self.result=run_wrapperCommand(command,tag="run_template_matching",relionProj=self.relProj)
+            # command = " ".join(command) + " 2> >(crboost_filterOutputStream.sh >&2)"
+            self.result=run_wrapperCommand(command,tag="run_template_matching",relionProj=self.relProj,filterOuputFlag="pytomTM")
     
     def get_gpu_info(self):
         try:

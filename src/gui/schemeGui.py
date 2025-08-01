@@ -1688,19 +1688,26 @@ class MainUI(QMainWindow):
        
         
         try:
-            log_contentOut=[]
-            with open(logOut, 'r') as log_file:
-                for line in log_file:
-                   cleaned_line = self.process_backspaces(line).strip()
-                   if cleaned_line:
+            with open(logOut, 'rb') as log_file:  # Open in binary mode
+                binary_lines = log_file.readlines()
+                log_contentOut = []
+                
+                for i, binary_line in enumerate(binary_lines):
+                    line = binary_line.decode('utf-8')
+                    starts_with_cr = binary_line.startswith(b'\r')
+                    if starts_with_cr:
+                        line = line.split('\r')[-1]
+                    cleaned_line = self.process_backspaces(line).strip()
+                    if cleaned_line:
                         log_contentOut.append(cleaned_line)
-                if len(log_contentOut) > 200:
-                    log_contentOut=log_contentOut[-200:]
 
-                log_contentOutStr= "\n".join(log_contentOut)
+                if len(log_contentOut) > 200:
+                    log_contentOut = log_contentOut[-200:]
+                
+                log_contentOutStr = "\n".join(log_contentOut)
                 self.textBrowserJobsOut.setText(log_contentOutStr)
             
-            log_contentError=[]               
+            log_contentError= []
             with open(logError, 'r') as log_fileError:
                 # log_contentError = log_fileError.readlines()
                 for lineError in log_fileError:
@@ -1716,6 +1723,7 @@ class MainUI(QMainWindow):
                 log_contentErrorStr= "\n".join(log_contentError)
                 self.textBrowserJobsError.setText(log_contentErrorStr)    
         except Exception as e:
+            #print(e)
             self.textBrowserJobsOut.setText(f"Logfile not available your job is probably waiting\nCheck queue") #{e})
         self.textBrowserJobsOut.moveCursor(QTextCursor.MoveOperation.End) 
         self.textBrowserJobsError.moveCursor(QTextCursor.MoveOperation.End)
