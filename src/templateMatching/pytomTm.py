@@ -14,7 +14,8 @@ class pytomTm(templateMatchingWrapperBase):
 
         print("--------------generate files for pytom---------------------------")
         sys.stdout.flush()  
-        self.generatePytomInputFiles(columnName="rlnTomoNominalStageTiltAngle",tag="tiltAngle",ext=".tlt")
+        #self.generatePytomInputFiles(columnName="rlnTomoNominalStageTiltAngle",tag="tiltAngle",ext=".tlt")
+        self.generatePytomInputFiles(columnName="rlnTomoYTilt",tag="tiltAngle",ext=".tlt")
         self.generatePytomInputFiles(columnName="rlnDefocusU",tag="defocus",fact=10000)
         self.generatePytomInputFiles(columnName="rlnMicrographPreExposure",tag="dose")
 
