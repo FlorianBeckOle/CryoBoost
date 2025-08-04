@@ -113,9 +113,14 @@ Check Results
 =============
 
 Tomograms:
-imod External/job007/warp_tiltseries/reconstruction/deconv/Position_1_11.80Apx.mrc
+imod Denoise/job009/tomograms/Position_1_11.80Apx.mrc 
 
-.. image:: img/tomogramWarpDeconv.png
+.. image:: img/tomogramDenoise.png
+
+Tomograms and Coordinates:
+imod Denoise/job009/tomograms/Position_1_11.80Apx.mrc External/job011/vis/imodPartRad/coords_Position_1.mod
+
+.. image:: img/tomogramDenoiseCopiaModel.png
 
 
 Processing Copia
@@ -355,6 +360,8 @@ PostProcessing
    
    Unfiltered Map: Reconstruct/job028/half1.mrc   
    Reference Mask: MaskCreate/job018/mask.mrc 
+   Estimate B-Facator autmatically ?: No #overestimated for that dataset
+   Use your own B-Facator: -75  
 
 .. figure:: img/finalPostProcessing.png
    :width: 220px
@@ -391,7 +398,7 @@ Mask creation
    
    Input 3d Map: Reconstruct/job030/merged.mrc 
    Lowpass: 20
-   Inital binarisation threshold: 6
+   Inital binarisation threshold: 5
    Extend binary Map this many pixels: 12
    Add soft-edge of this many pixels: 8
 
@@ -406,7 +413,7 @@ Class3d
    Input Mask: MaskCreate/job031/mask.mrc
    Inital Lowpass Filter (A): 60
    Symmetry: C2
-   Number of Iterations: 30
+   Number of Iterations: 35
    Number of Classes: 9
    Angular Sampling Interval: 3.7
    Offset Search Range: 8
@@ -449,7 +456,9 @@ Refine3d
    Initial Lowpass Filter: 60
    Symmetry: C2
    Use solvent flattened FSC: yes
-   
+   Inital angluar sampling: 3.7
+   Inital offset range: 3
+   Local searches from auto-sampling: 3.7
    Pre-read all particles into RAM: yes
    Use GPU acceleration: yes
    Submit to queue: yes
