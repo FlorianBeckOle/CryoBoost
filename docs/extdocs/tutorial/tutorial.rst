@@ -267,6 +267,7 @@ Bayesian Polish
    Fit Per Particle Motion: yes
    Number of Threads: 24
    Submit to queue: yes
+   Additional Arguments: --it 30000
 
 +++++++++++++++
 Extract 
