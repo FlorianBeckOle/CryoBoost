@@ -2,7 +2,7 @@ import sys,os
 from PyQt6.QtWidgets import QDialog
 from collections import namedtuple
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
-                            QCheckBox, QComboBox, QLabel, QLineEdit, QPushButton)
+                            QCheckBox, QComboBox, QLabel, QLineEdit, QPushButton,QMessageBox)
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QFileDialog
 from src.gui.libGui import browse_dirs
@@ -73,6 +73,7 @@ class quickSetup(QDialog):
         self.species_input = QLineEdit()
         self.species_input.setPlaceholderText("Ribosome,Proteasome,Other")
         self.species_input.setEnabled(True)
+        self.species_input.textChanged.connect(self.validate_species_name)
         if args.species == "None":
             self.species_input.setEnabled(False)
 
@@ -118,6 +119,19 @@ class quickSetup(QDialog):
             self.species_input.setText("noTag")  # Default value when enabled
         else: 
             self.species_input.setText("None")
+    
+    def validate_species_name(self, text):
+        
+        if "_" in text:
+            # Show warning message if underscore is found
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("Warning: Underscore in Species Name")
+            msg_box.setText("Species name contains underscores ('_').")
+            msg_box.setInformativeText("Underscores in species names are not possible")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.exec()
+    
         
     def on_ok_clicked(self):
         # Get values from the form
@@ -133,6 +147,16 @@ class quickSetup(QDialog):
             self.args.FilterTilts = "False"
 
         if self.particle_setup_cb.isChecked():
+            if "_" in self.species_input.text():
+                msg_box = QMessageBox()
+                msg_box.setIcon(QMessageBox.Icon.Warning)
+                msg_box.setWindowTitle("Warning: Underscore in Species Name")
+                msg_box.setText("Species name contains underscores ('_').")
+                msg_box.setInformativeText("Remove underscore from species names to continue")
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.exec()
+                return    
+            
             if self.species_input.text() == "":
                 self.species_input.setText("noTag")
             else:    

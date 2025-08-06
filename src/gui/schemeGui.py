@@ -1247,7 +1247,34 @@ class MainUI(QMainWindow):
             bin4Pixs=str(float(textline)*4)
             self.textEdit_algRescaleTilts.setText(bin4Pixs)
             self.textEdit_recVoxelSize.setText(bin4Pixs)
+        if "fsMotionAndCtf" in self.cbdat.scheme.jobs_in_scheme.values:
+            nyPixs=(float(textline)*2)+0.2
+            valCRangeMax=self.cbdat.scheme.getJobOptions("fsMotionAndCtf").loc[
+                             self.cbdat.scheme.getJobOptions("fsMotionAndCtf")["rlnJobOptionVariable"] == "param7_value",
+                             "rlnJobOptionValue"
+                             ].values[0]  
+            minCRange=float(valCRangeMax.split(":")[0])
+            maxCrange=float(valCRangeMax.split(":")[1])
+            if nyPixs>maxCrange:
+                crange=str(minCRange) + ":" + str(nyPixs)
+                params_dict = {"param7_value": crange}
+                self.setParamsDictToJobTap(params_dict,["fsMotionAndCtf"])
         
+        if "tsCtf" in self.cbdat.scheme.jobs_in_scheme.values:
+            nyPixs=(float(textline)*2)+0.2
+            valCRangeMax=self.cbdat.scheme.getJobOptions("tsCtf").loc[
+                             self.cbdat.scheme.getJobOptions("tsCtf")["rlnJobOptionVariable"] == "param2_value",
+                             "rlnJobOptionValue"
+                             ].values[0]  
+            minCRange=float(valCRangeMax.split(":")[0])
+            maxCrange=float(valCRangeMax.split(":")[1])
+            if nyPixs>maxCrange:
+                crange=str(minCRange) + ":" + str(nyPixs)
+                params_dict = {"param2_value": crange}
+                self.setParamsDictToJobTap(params_dict,["tsCtf"])
+        
+                
+            
     def setdosePerTiltToJobTap(self):
         params_dict = {"dose_rate": self.textEdit_dosePerTilt.toPlainText()} 
         if "ctffind" in self.cbdat.scheme.jobs_in_scheme.values:
@@ -1267,9 +1294,14 @@ class MainUI(QMainWindow):
     
     def setPathGainToJobTap(self):
         
-        params_dict = {"fn_gain_ref": self.line_path_gain.text()} 
+        gainPath=self.line_path_gain.text()
+        
+        if len(gainPath)==0:
+            gainPath="None"
+        
+        params_dict = {"fn_gain_ref": gainPath} 
         self.setParamsDictToJobTap(params_dict,["motioncorr"]) 
-        params_dict = {"param2_value": self.line_path_gain.text()} 
+        params_dict = {"param2_value": gainPath} 
         self.setParamsDictToJobTap(params_dict,["fsMotionAndCtf"]) 
         
     
@@ -1293,9 +1325,11 @@ class MainUI(QMainWindow):
                     gainOpString=gainOpString+":"
                 gainOpString=gainOpString+"transpose"
             
+            if len(gainOpString)==0:
+                gainOpString='None'
             #checkGainOptions(self.line_path_gain.text(),self.dropDown_gainRot.currentText(),self.dropDown_gainFlip.currentText())
             params_dict = {"param3_value": gainOpString}
-            print(params_dict)
+           
             self.setParamsDictToJobTap(params_dict,["fsMotionAndCtf"]) 
         
         
@@ -1321,8 +1355,10 @@ class MainUI(QMainWindow):
                 gainOpString=gainOpString+"transpose"
             
             #checkGainOptions(self.line_path_gain.text(),self.dropDown_gainRot.currentText(),self.dropDown_gainFlip.currentText())
+            if len(gainOpString)==0:
+                gainOpString='None'
             params_dict = {"param3_value": gainOpString}
-            print(params_dict)
+        
             self.setParamsDictToJobTap(params_dict,["fsMotionAndCtf"]) 
             
     def setInvertTiltAngleToJobTap(self):

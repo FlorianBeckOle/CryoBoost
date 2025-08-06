@@ -829,6 +829,8 @@ class dataImport():
     from src.rw.librw import mdocMeta
     self.mdoc=mdocMeta(self.wkMdoc)
     base_filename = os.path.splitext(self.mdoc.all_df.mdocFileName[0])[0]
+    base_filename = os.path.splitext(base_filename)[0]
+    
     path_to_search = os.path.splitext(self.mdoc.all_df.SubFramePath[0])[0]
     base_filename in path_to_search
     if base_filename in path_to_search:
@@ -855,9 +857,9 @@ class dataImport():
         file_name = os.path.basename(file_path)
         tragetFileName = os.path.join(targetFold,self.prefix+file_name)
         print("targetFileName:"+tragetFileName)
-        print("inputPatter:"+inputPattern)
+        print("inputPattern:"+inputPattern)
         if self.__chkFileExists(file_path,existingFiles)==False:
-            if self.relcompPrefix:
+            if self.relcompPrefix or True:
                 file_nameBase=os.path.splitext(os.path.splitext(file_name)[0])[0]+".mdoc"
                 tragetFileName=os.path.join(targetFold,self.prefix+file_nameBase)
             self.__adaptMdoc(self.prefix,file_path,tragetFileName,invTiltAngle)

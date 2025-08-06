@@ -30,6 +30,11 @@ def parse_arguments():
     num_args = len(sys.argv)-1
     args.numInputArgs=num_args
     
+    # Validate species string - raise exception if it contains underscores
+    if args.species != "None" and args.species != "noTag" and "_" in args.species:
+        raise ValueError("Error: Species names cannot contain underscores ('_')")
+    
+    
     return args,unkArgs
 
 def open_scheme_gui(args):

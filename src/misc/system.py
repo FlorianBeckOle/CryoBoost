@@ -16,7 +16,7 @@ def run_wrapperCommand(command,tag=None,relionProj=None,filterOuputFlag=None):
     """
     command_string = shlex.join(command)
     print(command_string)
-    print("launching waitbar will be updated in stpes of 10%")
+    print("launching ...")
     print(" ")
     
     sys.stdout.flush()
