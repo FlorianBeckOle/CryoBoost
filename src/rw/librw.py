@@ -885,6 +885,12 @@ class dataImport():
               lines[i] = "SubFramePath = " + prefix + baseName  + lineTmp
             else:
               lines[i] = "SubFramePath = " + prefix + lineTmp
+            frameStToCheck=self.targetPath + os.path.sep + self.framesLocalFold + os.path.sep + lines[i].split("SubFramePath = ")[1].strip()
+            if not os.path.isfile(frameStToCheck):
+                self.__writeLog("info","file: " + frameStToCheck + " not found !")
+                self.__writeLog("info","skipping corrupted: " + inputMdoc)
+                return
+            
         if ('TiltAngle =' in line) and invTiltAngle:  
             key,angle=line.split("=")
             lines[i] = key.replace(" ","") + " = " + str(-1*float(angle)) + "\n"
@@ -910,8 +916,13 @@ class dataImport():
             tragetFileName = os.path.join(targetFold,self.prefix+mdoc_file+file_name)
         if self.__chkFileExists(os.path.abspath(file_path),existingFiles)==False:
           try:
-             os.symlink(os.path.abspath(file_path),tragetFileName)
-             self.__writeLog("info","Created symlink: " + tragetFileName + " -> " + file_path)
+             if os.path.isfile(os.path.abspath(file_path)):
+                os.symlink(os.path.abspath(file_path),tragetFileName)
+                self.__writeLog("info","Created symlink: " + tragetFileName + " -> " + file_path)
+             else:
+                self.__writeLog("info","skipping symlink: " + tragetFileName + " -> " + file_path)
+                self.__writeLog("info",tragetFileName + " does not exist" )
+             
           except FileExistsError:
              self.__writeLog("info","Symlink already exists: " + tragetFileName + " -> " + file_path)
           except OSError as e:
