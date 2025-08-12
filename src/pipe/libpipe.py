@@ -1,5 +1,7 @@
 from src.rw.librw import cbconfig,importFolderBySymlink,schemeMeta,dataImport,starFileMeta   
 from src.misc.system import run_command,run_command_async
+from PyQt6.QtWidgets import QMessageBox,QApplication,QInputDialog,QLineEdit
+import time
 import shutil
 import os,re 
 import subprocess
@@ -111,6 +113,12 @@ class pipe:
   def initRelionProject(self):
     command=self.commandGui #.replace("--do_projdir","--do_projdir --idle 0")
     run_command_async(command)
+    time.sleep(1)
+    for i in range(1,5):
+      if os.path.isfile(self.pathProject + 'default_pipeline.star'):
+        break
+      time.sleep(i) 
+    
     
   def runScheme(self):
     
@@ -123,7 +131,31 @@ class pipe:
     #TODO check for alias check for scheduled jobs
     #TODO check running schedule
     
-    self.initRelionProject()
+    defPipePath=self.pathProject + os.path.sep +'default_pipeline.star'
+    
+    st=starFileMeta(defPipePath)
+    df=st.dict["pipeline_processes"]
+    hit=df.rlnPipeLineProcessName[df.index[df['rlnPipeLineProcessStatusLabel'] == 'Scheduled']]
+    if len(hit)>0:
+        msg_box = QMessageBox(None)
+        msg_box.setWindowTitle('Scheduled jobs')
+        msg_box.setText("You have already scheduled jobs. Proceed scheduling jobs?")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+        reply = msg_box.exec()
+        if reply == QMessageBox.StandardButton.No:
+            msg_box.close()   
+            return
+        msg_box.close()
+        QApplication.processEvents()
+    
+    tag, ok = QInputDialog.getText(None, "Input Dialog", "Enter Tag for alias:", QLineEdit.EchoMode.Normal, "")
+    QApplication.processEvents()
+            
+    if not os.path.exists(defPipePath):
+      self.generatCrJobLog("scheduleJobs","initialise Relion project opening gui " + "\n")
+      self.initRelionProject()
+    
     self.writeToLog(" + Schedule Jobs: --> Logs/scheduleJobs" "\n")
     path_scheme = self.scheme.schemeFolderPath
     path_schemeRel = "Schemes/" + path_scheme.split("/Schemes/")[1]
@@ -154,7 +186,7 @@ class pipe:
         
             command=command.replace("XXXJobOptionsXXX",updateField)
              
-        alias=job+str(count)
+        alias=job+"_"+str(tag)
         command=command.replace("XXXAliasXXX",alias)
         p=run_command(command)
         if p[0] is None:
@@ -181,6 +213,9 @@ class pipe:
         fullOutputName.append(outpuFold + os.path.sep + outputName)
         
         count+=1
+   
+   
+        
   def getLastJobOfType(self,jobType,listOfJobs):
     """
     Get the last job of a specific type from a list of jobs.
@@ -375,11 +410,12 @@ class pipe:
         logFile=self.pathProject+ "/Logs/" + jobName+ "/run.out"
         with open(logFile, "a") as myfile:
           myfile.write(text)
+          myfile.flush()
       if type=="err":  
         logFile=self.pathProject+ "/Logs/" + jobName+ "/run.err"
         with open(logFile, "a") as myfile:
           myfile.write(text)
-      
+          myfile.flush()
       logFile=self.pathProject+ "/Logs/" + jobName+ "/run.err"
       if not os.path.isfile(logFile):
         with open(logFile, "a") as myfile:
