@@ -6,7 +6,7 @@ def filterTiltsDL(ts,model,clmethod,outputFolder,plot=None,probThr=0.1,probActio
     if (clmethod=="binary"):
         from src.deepLearning.predictTilts_Binary import predict_tilts
         if (model=="default"):
-            model=os.getenv("CRYOBOOST_HOME")+"/data/models/model.pkl"
+            model=os.getenv("CRYOBOOST_HOME")+"/data/models/michaelNet_0.5/model.pkl"
         pngOut=outputFolder+os.path.sep +"png/"
         print("generating pngs from manual sorting " + pngOut)
         os.makedirs(pngOut, exist_ok=True)

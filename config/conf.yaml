@@ -48,10 +48,9 @@ meta_data:
     - PixelSpacing: Pixel in A
     - Voltage: kV
 
-
-# save the parameters that are exclusively based on the microscope used so they can automatically be filled in
-# parameter-aliases are used for parameter names
-
+filterTilts:
+  defaultModel: michaelNet_0.5
+ 
 microscopes:
   TitanKrios5:
     - invert_tiltAngles: "No"

@@ -9,6 +9,7 @@ from fastai.vision.data import imagenet_stats
 from fastai.vision.all import vision_learner
 from fastai.vision.all import xresnet18
 from fastai.metrics import accuracy,error_rate
+from torch import nn
 from torch import torch
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -26,9 +27,10 @@ from concurrent.futures import ProcessPoolExecutor
 from skimage.transform import resize
 import numpy as np
 import pandas as pd
-from src.deepLearning.modelClasses import SmallSimpleCNN
 from scipy.fft import fft2, ifft2, fftshift, ifftshift
 import pickle
+
+
 
 def mrc_to_pil_image(mrc_path,sz):
     """
@@ -213,15 +215,36 @@ def predictPilImageStack(pilImageStack,learn):
     Returns:
     - tuple: A tuple containing the predicted labels and probabilities.
     """
-    test_dl = learn.dls.test_dl(pilImageStack, with_labels=False,batch_tfms=Normalize.from_stats(*imagenet_stats))
+        
+    
+    has_testdl=hasattr(learn.dls, 'test_dl')    
+    if has_testdl:
+        print("  using direct test_dl")
+        test_dl = learn.dls.test_dl(pilImageStack, with_labels=False,batch_tfms=Normalize.from_stats(*imagenet_stats))
+    else:
+        print("  using dablock to create test_dl")
+        from src.deepLearning.modelClasses import get_datablockForPilImageStackGray
+        dblock=get_datablockForPilImageStackGray(pilImageStack)
+        dls = dblock.dataloaders(pilImageStack,with_labels=False,batch_tfms=Normalize.from_stats(*imagenet_stats))
+        test_dl = dls.test_dl(pilImageStack)
+    
     preds, _ = learn.get_preds(dl=test_dl)
-    decoded_preds = preds.argmax(dim=-1)
-    pred_labels = [learn.dls.vocab[pred] for pred in decoded_preds]
     pred_probs = [max(pred).item() for pred in preds]
+    
+    if max(pred_probs)<1.01:
+        decoded_preds = preds.argmax(dim=-1)
+        pred_labels = [learn.dls.vocab[pred] for pred in decoded_preds]
+    else:
+        from torch.nn import functional as F
+        probs = F.softmax(preds, dim=1)
+        decoded_preds = probs.argmax(dim=-1)
+        pred_labels = [learn.dls.vocab[pred] for pred in decoded_preds]
+        pred_probs = [float(prob.max()) for prob in probs]
+    
     return pred_labels,pred_probs
     
 
-def predict_tilts(ts,model,sz=384,batchSize=50,gpu=0,probThr=0.1,probAction="assingToGood",max_workers=20,pngOutPutPath=None):
+def predict_tilts(ts,model,sz=384,batchSize=50,gpu=0,probThr=0.1,probAction="assingToGood",max_workers=20,pngOutPutPath=None,modelType='byExtension'):
     """
     Predict the class of a PIL image stack using a fastai learner.
 
@@ -233,19 +256,9 @@ def predict_tilts(ts,model,sz=384,batchSize=50,gpu=0,probThr=0.1,probAction="ass
     tuple: A tuple containing the predicted labels and probabilities.
     """
     
-    torch.cuda.set_device(gpu) 
-    print("loading model:",model)
-    #learn =load_learner(model)
-    
-    with open(model, 'rb') as f:
-        learn = pickle.load(f)
-    _=learn.model.eval()
-   
     tiltspath=ts.getMicrographMovieNameFull()
     print("found:",str(len(tiltspath)),"tilts from",str(ts.nrTomo),'tomograms')
-    
-    #Custom dataloader refused to work in fastAI switched to direct prediction
-    #Images get transformed to pilImages and the batch wise predicted
+     
     nrBatch=round(len(tiltspath)/batchSize)
     if nrBatch<1:
         nrBatch=1
@@ -254,7 +267,27 @@ def predict_tilts(ts,model,sz=384,batchSize=50,gpu=0,probThr=0.1,probAction="ass
     all_pLabels = []
     all_pProb = []
     
-   
+    torch.cuda.set_device(gpu) 
+    print("loading model:",model)
+    _,modelExt=os.path.splitext(model)
+    
+    if modelExt==".pkl":
+        with open(model, 'rb') as f:
+            learn = pickle.load(f)
+    if modelExt==".pth":
+        from fastai.vision.all import Learner
+        from src.deepLearning.modelClasses import get_datablockForPilImageStackGray
+        from src.deepLearning.modelClasses import SmallSimpleCNNGray
+        pytorch_model = SmallSimpleCNNGray()
+        pytorch_model.load_state_dict(torch.load(model))
+        pilImageStack=mrcFilesToPilImageStackParallel(batches[0],sz,max_workers,ignoreNonSquare=0,pngOutputPath=None)
+        dblock=get_datablockForPilImageStackGray(pilImageStack)
+        dls = dblock.dataloaders(pilImageStack,with_labels=False)#,batch_tfms=Normalize.from_stats(*imagenet_stats))
+        learn = Learner(dls=dls, model=pytorch_model, loss_func=nn.CrossEntropyLoss())    
+    
+    _=learn.model.eval()
+    
+    
     for i, batch in enumerate(tqdm(batches, desc="Predicting Tilts"), 1):
         pilImageBatch=mrcFilesToPilImageStackParallel(batch,sz,max_workers,ignoreNonSquare=0,pngOutputPath=pngOutPutPath)
         

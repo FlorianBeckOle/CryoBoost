@@ -27,10 +27,13 @@ def test_fitlerTiltsDL_binaryWithModel():
     tilseriesStar="data/tilts/tilt_series_ctf.star"
     relionProj=os.path.abspath(__file__)
     relionProj=os.path.dirname(os.path.dirname(os.path.dirname(relionProj)))+os.path.sep
-    model="data/models/model.pkl"
+    model="data/models/michaelNet_0.6/model.pth"
     
     ts=tiltSeriesMeta(tilseriesStar,relionProj)
     ts=filterTiltsDL(ts,model,'binary','data/tmp/')
+    filterParams = {"cryoBoostDlLabel": ("good")}
+    ts.filterTilts(filterParams)
+    
     assert (ts.all_tilts_df.cryoBoostTestLabel=="good").all()
     
 def test_plotFitlerTilts():
@@ -101,7 +104,7 @@ def test_fitlerTilts(test_input):
                          [("--ctfMaxResolution '1,20,-70,70'"), 
                           ("--driftInAng '1,10,-70,70'"), 
                           ("--defocusInAng '1,50000,-70,70'"), 
-                          ("--model data/models/model.pkl")],
+                          ("--model data/models/michaelNet_0.6/model.pth")],
                            ids=lambda val: idfn(val, {'function_name': 'cryoboost_filterTilts'}))
 @pytest.mark.crboost_filterTilts
 def test_crboost_filterTilts(test_input):

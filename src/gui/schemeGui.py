@@ -44,6 +44,7 @@ class MainUI(QMainWindow):
        
         self.system=self.selSystemComponents()
         self.cbdat=self.initializeDataStrcuture(args)
+       
         if (self.cbdat is None):
             QApplication.instance().quit()
             sys.exit()
@@ -61,14 +62,30 @@ class MainUI(QMainWindow):
         if (self.cbdat.args.autoGen or self.cbdat.args.skipSchemeEdit):
             self.makeJobTabsFromScheme()
     
+    
     def adaptWidgetsToJobsInScheme(self):
         
         if "fsMotionAndCtf" in self.cbdat.scheme.jobs_in_scheme.values:
             self.dropDown_gainRot.clear()  # This will remove all items from the dropdown
             self.dropDown_gainRot.addItem("No transpose")
             self.dropDown_gainRot.addItem("Transpose")
-        
-         
+       
+        subfolders = [f.name for f in os.scandir(self.cbdat.modelFolder) if f.is_dir() and not f.name.startswith('.')]
+        self.dropDown_filterTiltsModel.clear()
+        self.dropDown_filterTiltsModel.addItems(subfolders)
+        self.dropDown_filterTiltsModel.addItem("browse")
+        defaultModel=self.cbdat.conf.confdata['filterTilts']['defaultModel']
+        candidate = defaultModel
+        if candidate:
+            candidate = candidate.rstrip(os.sep)
+        from PyQt6.QtCore import QSignalBlocker
+        with QSignalBlocker(self.dropDown_filterTiltsModel):
+            idx = self.dropDown_filterTiltsModel.findText(candidate)
+            if idx >= 0:
+                self.dropDown_filterTiltsModel.setCurrentIndex(idx)
+        with QSignalBlocker(self.textEdit_modelForFilterTilts):
+            self.setFilterTiltsModelToTextField()
+
     def selSystemComponents(self):
         system = type('', (), {})() 
         if shutil.which("zenity") is None:
@@ -81,6 +98,7 @@ class MainUI(QMainWindow):
         #custom varibales
         cbdat = type('', (), {})() 
         cbdat.CRYOBOOST_HOME=os.getenv("CRYOBOOST_HOME")
+        cbdat.modelFolder=cbdat.CRYOBOOST_HOME+os.path.sep+"data/models/"
         warpSchemeExists=os.path.exists(str(args.proj) +  "/Schemes/" + "warp_tomo_prep" + "/scheme.star")
         relioSchemeExists=os.path.exists(str(args.proj) +  "/Schemes/" + "relion_tomo_prep" + "/scheme.star")
         if relioSchemeExists:
@@ -152,6 +170,7 @@ class MainUI(QMainWindow):
         self.line_path_crImportPrefix.textChanged.connect(self.updateTomogramsForTraining)
         self.dropDown_gainRot.activated.connect(self.setGainRotToJobTap)
         self.dropDown_gainFlip.activated.connect(self.setGainFlipJobTap)
+        self.dropDown_filterTiltsModel.activated.connect(self.setFilterTiltsModelToTextField)
         self.textEdit_pixelSize.textChanged.connect(self.setPixelSizeToJobTap)
         self.textEdit_dosePerTilt.textChanged.connect(self.setdosePerTiltToJobTap)
         self.textEdit_nomTiltAxis.textChanged.connect(self.setTiltAxisToJobTap)
@@ -1360,6 +1379,21 @@ class MainUI(QMainWindow):
             params_dict = {"param3_value": gainOpString}
         
             self.setParamsDictToJobTap(params_dict,["fsMotionAndCtf"]) 
+    def setFilterTiltsModelToTextField(self):
+         
+        selected_item = self.dropDown_filterTiltsModel.currentText()
+        if selected_item == "browse":
+            targetFold=os.getcwd()
+            text_field = self.textEdit_modelForFilterTilts
+            dirName=browse_files(text_field,self.system.filebrowser)
+        else:
+            fullFolderPath=self.cbdat.modelFolder+os.path.sep+selected_item  
+            matching_files = glob.glob(fullFolderPath+os.path.sep+"model.*")
+            if len(matching_files)==0:
+                messageBox("Problem","No model found in model folder")
+                return
+            fullPath=matching_files[0]
+            self.textEdit_modelForFilterTilts.setText(fullPath)  
             
     def setInvertTiltAngleToJobTap(self):
         params_dict = {"flip_tiltseries_hand": self.textEdit_invertHand.toPlainText()} 
