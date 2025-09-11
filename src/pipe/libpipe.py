@@ -34,7 +34,10 @@ class pipe:
     self.pathFrames=args.movies
     self.importPrefix=args.impPrefix
     self.pathProject=args.proj
+    self.pathSchemeRel = "Schemes/" + self.scheme.schemeFolderPath.split("/Schemes/")[1]
+    self.defaultPipePath=self.pathProject+os.path.sep+"default_pipeline.star"
     self.invMdocTiltAngle=invMdocTiltAngle
+    
     print("init class pipe with invert Mdoc tiltangles set to: " + str(self.invMdocTiltAngle))
     headNode=self.conf.confdata['submission'][0]['HeadNode']
     sshStr=self.conf.confdata['submission'][0]['SshCommand']
@@ -130,43 +133,28 @@ class pipe:
   def scheduleJobs(self): 
     #TODO check for alias check for scheduled jobs
     #TODO check running schedule
-    
-    defPipePath=self.pathProject + os.path.sep +'default_pipeline.star'
-    
-    st=starFileMeta(defPipePath)
-    df=st.dict["pipeline_processes"]
-    hit=df.rlnPipeLineProcessName[df.index[df['rlnPipeLineProcessStatusLabel'] == 'Scheduled']]
-    if len(hit)>0:
-        msg_box = QMessageBox(None)
-        msg_box.setWindowTitle('Scheduled jobs')
-        msg_box.setText("You have already scheduled jobs. Proceed scheduling jobs?")
-        msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
-        reply = msg_box.exec()
-        if reply == QMessageBox.StandardButton.No:
-            msg_box.close()   
-            return
-        msg_box.close()
-        QApplication.processEvents()
-    
+
+    self.iniRelionProject()        
+    stopScheduling=self.checkForScheduledJobs()
+    if stopScheduling:
+        return
     tag, ok = QInputDialog.getText(None, "Input Dialog", "Enter Tag for alias:", QLineEdit.EchoMode.Normal, "")
     QApplication.processEvents()
-            
-    if not os.path.exists(defPipePath):
-      self.generatCrJobLog("scheduleJobs","initialise Relion project opening gui " + "\n")
-      self.initRelionProject()
     
     self.writeToLog(" + Schedule Jobs: --> Logs/scheduleJobs" "\n")
-    path_scheme = self.scheme.schemeFolderPath
-    path_schemeRel = "Schemes/" + path_scheme.split("/Schemes/")[1]
-    defPipePath=self.pathProject+os.path.sep+"default_pipeline.star"
-    count=1
-    fullOutputName=[]
     self.generatCrJobLog("scheduleJobs","scheduling " + str(len(self.scheme.jobs_in_scheme)) + " jobs:" + "\n")
-    
+    count=1
+    fullOutputName=[] 
     for job in self.scheme.jobs_in_scheme:
+        count,fullOutputName,stopScheduling=self.scheduleOneJob(job,count,fullOutputName,tag)
+        if stopScheduling:
+            break
+        count+=1
+  
+  def scheduleOneJob(self,job,count,fullOutputName,tag):
 
-        jobpath=os.path.join(path_schemeRel, job, "job.star")
+        stopScheduling=False
+        jobpath=os.path.join(self.pathSchemeRel, job, "job.star")
         command=self.commandScheduleJob.replace("XXXJobStarXXX",jobpath)
         if job != "importmovies" and count==1:
             #TODO: Ask user for input check if  jobs already exist
@@ -182,8 +170,6 @@ class pipe:
             else:
                 lastJob=self.getLastJobOfType(inputParamJobType,fullOutputName)
                 updateField="'" + inputParamName + " == " + lastJob + "'"
-               
-        
             command=command.replace("XXXJobOptionsXXX",updateField)
              
         alias=job+"_"+str(tag)
@@ -195,26 +181,53 @@ class pipe:
             print("Error message: " + str(p[1]))
             print("Exit code: " + str(p[2]))
             print("Stopping scheduling jobs")
-            break
-        
-        st=starFileMeta(defPipePath)
+            stopScheduling=True
+        st=starFileMeta(self.defaultPipePath)
         df=st.dict["pipeline_processes"]
         lf=df[df['rlnPipeLineProcessAlias'].str.contains(alias, na=False)]
         if lf.empty:
             self.generatCrJobLog("scheduleJobs","Error: no job found with alias: " + alias + "\n",type="err")
             print("Error: no job found with alias: " + alias)
-            break
+            stopScheduling=True
         else:
             self.generatCrJobLog("scheduleJobs"," -->job: " + job + " alias: " + alias + "\n")
             print("Scheduled job: " + job + " with alias: " + alias)  
-          
-        outpuFold=lf['rlnPipeLineProcessAlias'].values[0]
-        outputName=os.path.basename(self.conf.getJobOutput(job.split("_")[0]))
-        fullOutputName.append(outpuFold + os.path.sep + outputName)
         
-        count+=1
-   
-   
+        outputFold=lf['rlnPipeLineProcessAlias'].values[0]
+        outputName=os.path.basename(self.conf.getJobOutput(job.split("_")[0]))
+        fullOutputName.append(outputFold + os.path.sep + outputName)
+
+        return count,fullOutputName,stopScheduling
+        
+  def checkForScheduledJobs(self):
+    
+    stopScheduling=False
+    st=starFileMeta(self.defaultPipePath)
+    d = getattr(st, "dict", {}) or {}
+    if "pipeline_processes" in d and d["pipeline_processes"] is not None:
+        df = d["pipeline_processes"]
+        hit=df.rlnPipeLineProcessName[df.index[df['rlnPipeLineProcessStatusLabel'] == 'Scheduled']]
+        if len(hit)>0:
+            msg_box = QMessageBox(None)
+            msg_box.setWindowTitle('Scheduled jobs')
+            msg_box.setText("You have already scheduled jobs. Proceed scheduling jobs?")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+            reply = msg_box.exec()
+            if reply == QMessageBox.StandardButton.No:
+                msg_box.close()   
+                stopScheduling=True
+            msg_box.close()
+            QApplication.processEvents()
+    return stopScheduling   
+      
+    
+    
+  def iniRelionProject(self):  
+    if not os.path.exists(self.defaultPipePath):
+      self.generatCrJobLog("scheduleJobs","initialise Relion project opening gui " + "\n")
+      self.initRelionProject()  
+        
         
   def getLastJobOfType(self,jobType,listOfJobs):
     """
