@@ -37,6 +37,10 @@ Install dependencies
    conda install sphinx sphinx_rtd_theme
    pip install sphinx-togglebutton     
 
+
+
+
+
 Test torch and fastai installation
 ==================================
 .. code-block:: bash
@@ -51,11 +55,14 @@ Install cryoboost
    
    cd /path/to/my/Folder/
    git clone https://github.com/FlorianBeckOle/CryoBoost.git
-   
+   #get weights for bigger models
+   wget -O CryoBoost/data/models/michaelNet_0.6/model.pth https://datashare.biochem.mpg.de/s/eaczrmib1ITjnnw/download
+
 To start CryoBoost, the PATH, PYTHONPATH, CRYOBOOST_PYTHON_PATH(python intepreter), and CRYOBOOST_HOME need to be set.
 Fot this, adapt the Environment in the /path/to/my/Folder/CryoBoost/conf/conf.yaml (required for remote execution), and
 the /path/to/my/Folder/CryoBoost/.cbenv file as shown below. 
 Then source .cbenv before starting CryoBoost.
+
 
 Configure /path/to/my/Folder/CryoBoost/config/conf.yaml
 =======================================================
