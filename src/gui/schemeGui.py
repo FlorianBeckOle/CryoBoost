@@ -69,8 +69,14 @@ class MainUI(QMainWindow):
             self.dropDown_gainRot.clear()  # This will remove all items from the dropdown
             self.dropDown_gainRot.addItem("No transpose")
             self.dropDown_gainRot.addItem("Transpose")
-       
         subfolders = [f.name for f in os.scandir(self.cbdat.modelFolder) if f.is_dir() and not f.name.startswith('.')]
+        subfolders = [
+            f.name for f in os.scandir(self.cbdat.modelFolder)
+            if f.is_dir() and not f.name.startswith('.') and (
+                os.path.isfile(os.path.join(f.path, "model.pth")) or
+                os.path.isfile(os.path.join(f.path, "model.pkl"))
+            )
+        ]
         self.dropDown_filterTiltsModel.clear()
         self.dropDown_filterTiltsModel.addItems(subfolders)
         self.dropDown_filterTiltsModel.addItem("browse")
