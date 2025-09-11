@@ -150,7 +150,13 @@ class pipe:
         if stopScheduling:
             break
         count+=1
-  
+    if count==len(self.scheme.jobs_in_scheme)+1:
+          QMessageBox.information(None,
+                                    "Sucessfully scheduled jobs",
+                                    "Use relion gui to run the jobs\nJobs==>Run scheduled jobs==>Execute"
+                                    )
+          QApplication.processEvents()
+    
   def scheduleOneJob(self,job,count,fullOutputName,tag):
 
         stopScheduling=False
