@@ -71,12 +71,12 @@ class MainUI(QMainWindow):
             self.dropDown_gainRot.addItem("Transpose")
         subfolders = [f.name for f in os.scandir(self.cbdat.modelFolder) if f.is_dir() and not f.name.startswith('.')]
         subfolders = [
-            f.name for f in os.scandir(self.cbdat.modelFolder)
-            if f.is_dir() and not f.name.startswith('.') and (
-                os.path.isfile(os.path.join(f.path, "model.pth")) or
-                os.path.isfile(os.path.join(f.path, "model.pkl"))
-            )
-        ]
+                        f.name for f in os.scandir(self.cbdat.modelFolder)
+                        if f.is_dir() and not f.name.startswith('.') and (
+                        os.path.isfile(os.path.join(f.path, "model.pth")) or
+                        os.path.isfile(os.path.join(f.path, "model.pkl"))
+                        )
+                    ]
         self.dropDown_filterTiltsModel.clear()
         self.dropDown_filterTiltsModel.addItems(subfolders)
         self.dropDown_filterTiltsModel.addItem("browse")
@@ -91,7 +91,11 @@ class MainUI(QMainWindow):
                 self.dropDown_filterTiltsModel.setCurrentIndex(idx)
         with QSignalBlocker(self.textEdit_modelForFilterTilts):
             self.setFilterTiltsModelToTextField()
-
+        
+        if "aligntiltsWarp" in self.cbdat.scheme.jobs_in_scheme.values:
+            with QSignalBlocker(self.dropDown_tomoAlignProgram):
+                self.dropDown_tomoAlignProgram.addItem("Aretomo3")    
+    
     def selSystemComponents(self):
         system = type('', (), {})() 
         if shutil.which("zenity") is None:
@@ -1525,7 +1529,7 @@ class MainUI(QMainWindow):
             params_dictAre = {"do_aretomo2": "No"}
             params_dictImod = {"do_imod_patchtrack": "Yes"}
         
-        if (programSelected=="Aretomo"):
+        if (programSelected=="Aretomo") or (programSelected=="Aretomo3"):
             params_dictAre = {"do_aretomo2": "Yes"}
             params_dictImod = {"do_imod_patchtrack": "No"}
         

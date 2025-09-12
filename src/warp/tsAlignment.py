@@ -91,11 +91,27 @@ class tsAlignment(warpWrapperBase):
                     batchSz=self.st.nrTomo
                 command.extend(["--axis_iter",str(tsIter)])
                 command.extend(["--axis_batch",str(batchSz)])
-                #-"--patches",str(args.aretomo_patches),
-            #    command.append('--axis_iter 3')
-            #    command.append('--axis_batch 5')
+              
+        if (self.args.alignment_program=="Aretomo3"):
+
+            command=["WarpTools", "ts_aretomo3",
+                    "--settings",self.args.out_dir+"/"+ self.tsSettingsName,
+                    "--angpix",str(self.args.rescale_angpixs),
+                    "--alignz",str(int(float(self.args.aretomo_sample_thickness)*10)),
+                    "--perdevice",str(self.args.perdevice),
+                    ]
+            if self.args.aretomo_patches!="0x0":
+                command.extend(["--patches",str(self.args.aretomo_patches)])
+             
+            if self.args.refineTiltAxis_iter_and_batch!="0:0":
+                tsIter=self.args.refineTiltAxis_iter_and_batch.split(":")[0]
+                batchSz=self.args.refineTiltAxis_iter_and_batch.split(":")[1]
+                if int(batchSz)>int(self.st.nrTomo):
+                    batchSz=self.st.nrTomo
+                command.extend(["--axis_iter",str(tsIter)])
+                command.extend(["--axis_batch",str(batchSz)])
            
-        else:
+        if (self.args.alignment_program=="Imod"):
             command=["WarpTools", "ts_etomo_patches",
                     "--settings",self.args.out_dir + "/" + self.tsSettingsName,
                     "--angpix",str(self.args.rescale_angpixs),
@@ -118,8 +134,11 @@ class tsAlignment(warpWrapperBase):
             tsID=os.path.basename(stTiltName.replace(".star",""))
             tomoStar=starFileMeta(self.args.out_dir+"/tomostar/"+tsID+".tomostar")
             keysRel = [os.path.basename(path) for path in stTilt.df['rlnMicrographMovieName']]
-            if self.args.alignment_program=="Aretomo":
-                AreAlnFile=self.args.out_dir+"warp_tiltseries/tiltstack/" + tsID + os.path.sep + tsID + ".st.aln"
+            if self.args.alignment_program=="Aretomo" or self.args.alignment_program=="Aretomo3":
+                if self.args.alignment_program=="Aretomo":
+                    AreAlnFile=self.args.out_dir+"warp_tiltseries/tiltstack/" + tsID + os.path.sep + tsID + ".st.aln"
+                else:
+                    AreAlnFile=self.args.out_dir+"warp_tiltseries/tiltstack/" + tsID + os.path.sep + tsID + ".aln"
                 aln=self.readAretomoAlgFile(AreAlnFile)
             else:
                 ImodXfFile=self.args.out_dir+"warp_tiltseries/tiltstack/" + tsID + os.path.sep + tsID + ".xf"
