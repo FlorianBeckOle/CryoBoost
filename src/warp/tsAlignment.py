@@ -101,7 +101,7 @@ class tsAlignment(warpWrapperBase):
                     "--perdevice",str(self.args.perdevice),
                     ]
             if self.args.aretomo_patches!="0x0":
-                command.extend(["--patches",str(self.args.aretomo_patches)])
+                command.extend(["--patches",str(self.args.aretomo_patches).replace("x",",")])
              
             if self.args.refineTiltAxis_iter_and_batch!="0:0":
                 tsIter=self.args.refineTiltAxis_iter_and_batch.split(":")[0]

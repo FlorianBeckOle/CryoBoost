@@ -1469,7 +1469,7 @@ class MainUI(QMainWindow):
     def setAreTomoPatchToJobTap(self):
         
         if "aligntiltsWarp" in self.cbdat.scheme.jobs_in_scheme.values:
-            params_dict = {"other_args": self.textEdit_areTomoPatch.toPlainText()}
+            params_dict = {"other_args": "--aretomo_patches " + self.textEdit_areTomoPatch.toPlainText() + " \\"}
             self.setParamsDictToJobTap(params_dict,["aligntiltsWarp"]) 
         
     def setAlgRescaleTiltsJobTap(self):
