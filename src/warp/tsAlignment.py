@@ -145,6 +145,15 @@ class tsAlignment(warpWrapperBase):
                 ImodTltFile=self.args.out_dir+"warp_tiltseries/tiltstack/" + tsID + os.path.sep + tsID + ".tlt"
                 aln=self.readImodXfAndTiltsFile(ImodXfFile,ImodTltFile)
             if aln is None:
+                 targetDir=self.args.out_dir+"/nonAlgTomos/"
+                 os.makedirs(targetDir, exist_ok=True)
+                 import shutil
+                 xmlName=self.args.out_dir+"/warp_tiltseries/" + tsID + ".xml"
+                 tomoStarName=self.args.out_dir+"/tomostar/" + tsID + ".tomostar"
+                 print(xmlName)
+                 print(tomoStarName)
+                 shutil.move(xmlName, targetDir)
+                 shutil.move(tomoStarName, targetDir)
                  tsIDAlgFaild.append(tsID)
             else:                        
                 aln = aln[aln[:, 0].argsort()]

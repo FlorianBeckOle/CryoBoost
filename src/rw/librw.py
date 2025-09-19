@@ -873,8 +873,10 @@ class dataImport():
     
     with open(inputMdoc, 'r') as file:
       lines = file.readlines()
+      nrTilts=0
       for i, line in enumerate(lines):
         if 'SubFramePath' in line:
+            nrTilts+=1
             lineTmp=line.replace("SubFramePath = \\","")
             lineTmp=line.replace("SubFramePath =","")
             lineTmp=os.path.basename(lineTmp.replace('\\',"/"))
@@ -890,11 +892,14 @@ class dataImport():
                 self.__writeLog("info","file: " + frameStToCheck + " not found !")
                 self.__writeLog("info","skipping corrupted: " + inputMdoc)
                 return
-            
         if ('TiltAngle =' in line) and invTiltAngle:  
             key,angle=line.split("=")
             lines[i] = key.replace(" ","") + " = " + str(-1*float(angle)) + "\n"
-          
+      
+      if nrTilts<4:
+            self.__writeLog("info",inputMdoc  + " has only " + str(nrTilts) + " tilts")
+            self.__writeLog("info","skipping corrupted: " + inputMdoc)
+            return
       lines.append("CryoBoost_RootMdocPath = " + os.path.abspath(inputMdoc) + "\n")       
       with open(outputMdoc, 'w') as file:
         file.writelines(lines)
