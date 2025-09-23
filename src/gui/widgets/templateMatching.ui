@@ -58,6 +58,9 @@
        <height>25</height>
       </rect>
      </property>
+     <property name="text">
+      <string>None</string>
+     </property>
     </widget>
     <widget class="QPushButton" name="btn_browse_tm_template_volume">
      <property name="geometry">
@@ -95,7 +98,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Auto</string>
+      <string>None</string>
      </property>
     </widget>
     <widget class="QPushButton" name="btn_browse_tm_template_volumeMask">

@@ -1,6 +1,7 @@
 import sys
 import os
 import pandas as pd
+import numpy as np
 import glob,random  
 from PyQt6 import QtWidgets
 from PyQt6.QtGui import QTextCursor
@@ -747,7 +748,9 @@ class MainUI(QMainWindow):
             pixSRec=self.getReconstructionPixelSizeFromJobTab()
             with mrcfile.open(maskName, header_only=True) as mrc:
                 pixSMask = mrc.voxel_size.x
-                boxsize = mrc.header.nx  # or 
+                boxsize = mrc.header.nx  # or
+
+            tmVolPix,tmVolBoxsize=self.getTemplateVolumePixsAndBoxSize()
                
             if pixSRec!=str(pixSMask):
                 msg = QMessageBox()
@@ -760,7 +763,19 @@ class MainUI(QMainWindow):
                     importedVol=self.adaptVolume(maskName,boxsize,pixSMask,pixSRec,checkInvert=False,tag=tag)
             else:
                 importedVol=self.adaptVolume(maskName,boxsize,pixSMask,pixSRec,checkInvert=False,tag=tag)
-            absPathToVol=os.path.abspath(importedVol)        
+            
+            absPathToVol=os.path.abspath(importedVol)
+            print(boxsize,tmVolBoxsize)
+            if boxsize!=tmVolBoxsize:
+                msg = QMessageBox()
+                msg.setWindowTitle("Problem!")
+                msg.setText("Boxsize of template and mask differ!\n\nRegenerate the mask from template or provide a mask with correcte pixelsize and the same boxsize as the template")
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg.setMinimumWidth(300)
+                result = msg.exec()
+                importedVol="None"
+                absPathToVol="None"
+                    
         else:
             absPathToVol=maskName
        
@@ -853,6 +868,24 @@ class MainUI(QMainWindow):
         jobTag=self.getTagFromCurrentTab()
         self.setParamsDictToJobTap(params_dict,["templatematching"+jobTag])
     
+    def getTemplateVolumePixsAndBoxSize(self):
+        
+        widget = self.tabWidget.currentWidget()
+        text_field = widget.findChild(QLineEdit, "line_path_tm_template_volume")  # Find QTextEdit named "text1"
+        tmVolName = text_field.text()  # Get text content
+       
+        if os.path.isfile(tmVolName):
+           with mrcfile.open(tmVolName, header_only=True) as mrc:
+                pixSMask = mrc.voxel_size.x
+                boxsizeMask = mrc.header.nx  # or 
+        
+        return pixSMask,boxsizeMask
+    def getRawPixelSizeFromJobTab(self):
+        scheme=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
+        pixS = scheme.job_star['importmovies'].dict['joboptions_values'][
+            scheme.job_star['importmovies'].dict['joboptions_values']['rlnJobOptionVariable'] == 'angpix'
+            ]['rlnJobOptionValue'].values[0]
+        return pixS     
     
     def getReconstructionPixelSizeFromJobTab(self):
         
@@ -870,6 +903,7 @@ class MainUI(QMainWindow):
             scheme.job_star['reconstructionfull'].dict['joboptions_values']['rlnJobOptionVariable'] == 'binned_angpix'
             ]['rlnJobOptionValue'].values[0]
             return pixS    
+        
         if "tsReconstruct" in scheme.jobs_in_scheme.values: 
             pixS=scheme.job_star['tsReconstruct'].dict['joboptions_values']['rlnJobOptionValue'][9]
             return pixS
@@ -884,7 +918,35 @@ class MainUI(QMainWindow):
             pixS=-1
         
         return pixS
+    def getReconstructionSizeFromJobTab(self):
         
+        widget = self.tabWidget.currentWidget()
+        index = self.tabWidget.indexOf(widget)
+        scheme=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
+        self.tabWidget.setCurrentIndex(index)
+        tag=self.getTagFromCurrentTab()
+        
+        if "tsReconstruct"+tag in scheme.jobs_in_scheme.values: 
+            tomoSz=scheme.job_star['aligntiltsWarp'+tag].dict['joboptions_values']['rlnJobOptionValue'][9]
+            dims = tuple(int(part) for part in tomoSz.split('x'))
+            return dims
+        if "reconstructionfull"+tag in scheme.jobs_in_scheme.values: 
+            xdim = scheme.job_star['reconstructionfull'+tag].dict['joboptions_values'][
+            scheme.job_star['reconstructionfull'].dict['joboptions_values']['rlnJobOptionVariable'] == 'x_dim'
+            ]['rlnJobOptionValue'].values[0]
+            ydim = scheme.job_star['reconstructionfull'+tag].dict['joboptions_values'][
+            scheme.job_star['reconstructionfull'].dict['joboptions_values']['rlnJobOptionVariable'] == 'y_dim'
+            ]['rlnJobOptionValue'].values[0]
+            zdim = scheme.job_star['reconstructionfull'+tag].dict['joboptions_values'][
+            scheme.job_star['reconstructionfull'].dict['joboptions_values']['rlnJobOptionVariable'] == 'z_dim'
+            ]['rlnJobOptionValue'].values[0]
+            return int(xdim),int(ydim),int(zdim)    
+        
+        if pixS is None:
+            messageBox("Problem","No Reconstruction Job. You cannot run template matching")
+            pixS=-1
+        
+        return pixS    
         
         
     def generateTmVolumeTemplateMask(self):
@@ -998,7 +1060,7 @@ class MainUI(QMainWindow):
         jobTag=self.getTagFromCurrentTab()
         self.setParamsDictToJobTap(params_dict,["templatematching"+jobTag])
     
-    def adaptVolume(self,inputVolName,boxsize,pixSTemplate,pixSRec,checkInvert=True,tag=""):
+    def adaptVolume(self,inputVolName,boxsize,pixSTemplate,pixSRec,checkInvert=True,tag="",targetBoxSize=None):
         templateFold="templates/"+ tag 
         tmBase= templateFold + "/template_box"
         if self.line_path_new_project.text()=="":
@@ -1044,10 +1106,52 @@ class MainUI(QMainWindow):
                         voxel_size_angstrom_out_header=pixSRec,voxel_size_angstrom_output=pixSRec,
                         box_size_output=newBox,invert_contrast=invI,envStr=envStr)
         
-        
         return resizedVolNameB
-        
     
+    def preFlightParameterTest(self):
+        
+        
+        s=self.cbdat.scheme.jobs_in_scheme
+        tmJobs =s[s.str.startswith('templatematching')]
+        pixSTomogram=self.getReconstructionPixelSizeFromJobTab()
+        pixSRaw=self.getRawPixelSizeFromJobTab()
+        sizeTomogram=self.getReconstructionSizeFromJobTab()
+        tomoScale=float(pixSRaw)/float(pixSTomogram)
+        szTomoBin = tuple(int(float(x) * tomoScale) for x in sizeTomogram)
+        for tmJob in tmJobs:
+            print("check template matching params")
+            ind=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionVariable']=="in_3dref"
+            templateName=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionValue'][ind].iloc[0]
+            ind=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionVariable']=="in_mask"
+            maskName=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionValue'][ind].iloc[0]
+            if os.path.exists(templateName):
+                with mrcfile.open(templateName, header_only=True) as mrc:
+                    pixSTemplate = mrc.voxel_size.x
+                    boxsizeTemplate = mrc.header.nx                                 
+            else:
+                messageBox("Problem","Template:" + templateName + " cannot be read \n Check template")
+                return False
+            if os.path.exists(maskName):
+                with mrcfile.open(maskName, header_only=True) as mrc:
+                    pixSMask = mrc.voxel_size.x
+                    boxsizeMask = mrc.header.nx 
+            else:
+                messageBox("Problem","Mask:" + maskName + " cannot be read \n Check mask")
+                return False         
+            #if not (pixSTemplate==pixSMask==pixSTomogram):
+            tol = 1e-9
+            pix_vals = np.array([pixSTemplate, pixSMask, pixSTomogram], dtype=float)
+            if not np.allclose(pix_vals, pix_vals[0], atol=tol):
+                messageBox("Problem:","Pixelsize does not match: pixSTemplate:"+str(pixSTemplate)+" pixSMask:"+str(pixSMask)+" pixSTomogram:"+str(pixSTomogram))
+                return False
+            if not (boxsizeTemplate==boxsizeMask):
+                messageBox("Problem","Boxsize mask vs template does not match: boxsizeTemplate:"+str(boxsizeTemplate)+" boxsizeMask:"+str(boxsizeMask))
+                return False
+            if boxsizeTemplate>min(szTomoBin):
+                messageBox("Problem","Boxsize template is larger than tomogram: boxsizeTemplate:"+str(boxsizeTemplate)+" min(sizeTomogram):"+str(min(sizeTomogram)))
+                return False
+        return True
+        
     def browseTmVolumeTemplate(self):
         """
         Sets the path to movies in the importmovies job to the link provided in the line_path_movies field.
@@ -1643,8 +1747,12 @@ class MainUI(QMainWindow):
                 self.cbdat.pipeRunner.setCurrentNodeScheme("WAIT")
             else:
                 return    
+        parameterOk=self.preFlightParameterTest()
         
-        self.cbdat.pipeRunner.runScheme()
+        if parameterOk:
+            self.cbdat.pipeRunner.runScheme()
+        else:
+            messageBox("Problem","Scheme not started check your inputs")    
     
     def scheduleJobs(self):
         

@@ -15,9 +15,9 @@ loop_
 _rlnJobOptionVariable #1 
 _rlnJobOptionValue #2 
     fn_exe         crboost_match_template.py
-  in_3dref         "../../data/vols/copiaBlack_11.8A.mrc" 
+  in_3dref         "None" 
  in_coords         "" 
-   in_mask         "../../data/vols/mask_copia_11.8A.mrc" 
+   in_mask         "None" 
     in_mic         Schemes/relion_tomo_prep/reconstructionfull/tomograms.star
     in_mov         "" 
    in_part         "" 
