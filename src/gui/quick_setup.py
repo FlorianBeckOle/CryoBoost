@@ -82,6 +82,27 @@ class quickSetup(QDialog):
         main_layout.addLayout(species_layout)
         self.species_input.setText(args.species)
 
+        # Create layout for project path input
+        project_layout = QHBoxLayout()
+        project_label = QLabel("Project Path:")
+        self.project_input = QLineEdit()
+        self.project_input.setPlaceholderText("Select project directory...")
+        self.project_input.setToolTip("Browse to the directory containing your project files.")
+        self.project_browse_btn = QPushButton("Browse")
+
+        # Connect browse button to file dialog
+        self.project_browse_btn.clicked.connect(self.browse_project_path)
+
+        project_layout.addWidget(project_label)
+        project_layout.addWidget(self.project_input)
+        project_layout.addWidget(self.project_browse_btn)
+        main_layout.addLayout(project_layout)
+
+        # Store initial value if available
+        if hasattr(args, "proj"):
+            self.project_input.setText(args.proj)
+
+
         # Add some spacing
         main_layout.addSpacing(20)
         
@@ -100,6 +121,11 @@ class quickSetup(QDialog):
         self.args=None
         self.close()
     
+    def browse_project_path(self):
+        # Open a directory dialog and set the selected path
+        folder = QFileDialog.getExistingDirectory(self, "Select Project Directory", os.getcwd())
+        if folder:
+            self.project_input.setText(folder)
        
     def workflow_selected(self, text):
         # Handle the workflow selection change
@@ -165,6 +191,7 @@ class quickSetup(QDialog):
             self.args.species = "None"
         
         self.args.scheme=self.workflow_dropdown.currentText()
+        self.args.proj=self.project_input.text()
         
          
         self.close()

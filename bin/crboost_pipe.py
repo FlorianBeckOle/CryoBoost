@@ -19,7 +19,7 @@ def parse_arguments():
     parser.add_argument("--Noise2Noise", "-n2n", required=False,type=str,default="True",help="use Noise2Noise filter in scheme, True/False")
     parser.add_argument("--FilterTilts", "-ft", required=False,type=str,default="True",help="remove bad tilts in scheme, True/False")
     parser.add_argument("--impPrefix", "-iP", required=False,default="auto",help="Input prefix")
-    parser.add_argument("--proj", "-p", required=False,default="None",help="Output output project dir")
+    parser.add_argument("--proj", "-p", required=False,default="crProject",help="Output output project dir")
     parser.add_argument("--noGui", "-nG", required=False,action='store_true',help="do not open cryoboost gui")
     parser.add_argument("--autoGen", "-aG", required=False, action='store_true', help="gen Project and scheme")
     parser.add_argument("--autoLaunch", "-aL", required=False, action='store_true', help="launch relion scheme")
