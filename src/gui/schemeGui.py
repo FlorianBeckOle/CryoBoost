@@ -1148,7 +1148,7 @@ class MainUI(QMainWindow):
                 messageBox("Problem","Boxsize mask vs template does not match: boxsizeTemplate:"+str(boxsizeTemplate)+" boxsizeMask:"+str(boxsizeMask))
                 return False
             if boxsizeTemplate>min(szTomoBin):
-                messageBox("Problem","Boxsize template is larger than tomogram: boxsizeTemplate:"+str(boxsizeTemplate)+" min(sizeTomogram):"+str(min(sizeTomogram)))
+                messageBox("Problem","Boxsize template is larger than binned tomogram size: boxsizeTemplate:"+str(boxsizeTemplate)+" sizeTomoBin:"+str(min(szTomoBin)))
                 return False
         return True
         
