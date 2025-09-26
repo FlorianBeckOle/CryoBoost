@@ -1,7 +1,9 @@
+import os
 import numpy as np
 from scipy import fftpack, ndimage
 import mrcfile
 import subprocess
+from src.rw.librw import cbconfig
 
 
 def gaussian_lowpass_mrc(input_mrc, output_mrc: str=None, cutoff_angstrom: float=None, 
@@ -69,7 +71,13 @@ def gaussian_lowpass_mrc(input_mrc, output_mrc: str=None, cutoff_angstrom: float
 
 def processVolume(input_mrc: str, output_mrc: str, cutoff_angstrom: float=None, cutoff_edge_width: float=6,
                   voxel_size_angstrom: float = None,voxel_size_angstrom_out_header: float = None ,invert_contrast: bool = False,voxel_size_angstrom_output: float = None,
-                  box_size_output: float = None,envStr: str = None):
+                  box_size_output: float = None,envStr: str = "ConvLocal"):
+    if envStr=="ConvLocal":
+        CRYOBOOST_HOME=os.getenv("CRYOBOOST_HOME")
+        confPath=CRYOBOOST_HOME + "/config/conf.yaml"
+        conf=cbconfig(confPath)     
+        envStr=conf.confdata['local']['Environment']+";"
+    
     program='relion_image_handler'
     inp=' --i ' + input_mrc
     outp=' --o ' + output_mrc

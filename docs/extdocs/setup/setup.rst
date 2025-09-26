@@ -33,6 +33,7 @@ Install dependencies
    pip install scikit-learn scikit-image
    pip install wget
    pip install napari     
+   pip install --force-reinstall scipy==1.11.4 #downgrade needed on our system 
    #for local documentation use (optional)
    conda install sphinx sphinx_rtd_theme
    pip install sphinx-togglebutton     
