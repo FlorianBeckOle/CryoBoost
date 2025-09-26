@@ -18,6 +18,11 @@ Open CryoBoost
 Adapt Tomogram Parameters
 ==========================
 
+.. image:: img/crboostQuickSetup.png
+   :width: 400px
+   
+#. Click Ok to continue
+
 .. image:: img/setup.png
 
 #. Click on Set Jobs to create the Job tabs.
