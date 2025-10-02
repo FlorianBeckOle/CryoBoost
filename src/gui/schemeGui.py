@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import glob,random  
 from PyQt6 import QtWidgets
+from PyQt6.QtWidgets import QInputDialog
 from PyQt6.QtGui import QTextCursor
 from PyQt6.uic import loadUi
 from PyQt6.QtWidgets import QDialog,QTableWidget,QScrollArea,QTableWidgetItem, QVBoxLayout, QApplication, QMainWindow,QMessageBox,QWidget,QLineEdit,QComboBox,QRadioButton,QCheckBox,QSizePolicy 
@@ -253,17 +254,33 @@ class MainUI(QMainWindow):
         for i, job in enumerate(self.cbdat.scheme.jobs_in_scheme):
             self.table_scheme.setItem(i, 0, QTableWidgetItem(str(job))) 
             self.table_scheme.setItem(i, 1, QTableWidgetItem())
-            #self.table_scheme.item(i, 1).setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
-            #self.table_scheme.item(i, 1).setCheckState(Qt.CheckState.Unchecked)
-            #self.table_scheme.setItem(i, 2, QTableWidgetItem(str("undefined")))
-            #self.table_scheme.setItem(i, 3, QTableWidgetItem(str("undefined")))
+           
             
     def makeJobTabsFromScheme(self):
         """
         insert a new tab for every job and place a table with the parameters found in the respective job.star
         file in the ["joboptions_values"] df.
         """
+        self.jobTapNrSetUpTaps=1
         
+        if self.btn_makeJobTabs.text()=="Add Jobs":
+            items = ("Particle Species","NoiseToNoise Filter")
+            item, ok = QInputDialog.getItem(None, "Select job(s) to add to scheme", "Available Job(s)", items, 0, False)
+            if item == "NoiseToNoise Filter":
+                self.cbdat.scheme.addJob("ntn")
+            elif item == "Particle Species":
+                speciesName, ok = QInputDialog.getText(None, "Input Dialog", "Enter species name:")
+                self.cbdat.scheme=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
+                self.cbdat.scheme=self.cbdat.scheme.addParticleJobs({speciesName},replaceNonTaged=False)
+                while self.tabWidget.count() > 1:
+                    self.tabWidget.removeTab(1)
+                self.genParticleSetups()
+                insertPosition=2
+                for job in self.cbdat.scheme.jobs_in_scheme:
+                    self.schemeJobToTab(job,self.cbdat.conf,insertPosition)
+                    insertPosition += 1  
+            return
+            
         self.tabWidget.setTabVisible(1,True)
         
         if ((self.check_edit_scheme.isChecked()) and (self.cbdat.args.autoGen == False) and (self.cbdat.args.skipSchemeEdit == False)):
@@ -318,11 +335,12 @@ class MainUI(QMainWindow):
             #params_dict = {"generate_split_tomograms": "Yes" }
             #self.setParamsDictToJobTap(params_dict)
         self.loadConfig()
-        self.btn_makeJobTabs.setEnabled(False)
+        #self.btn_makeJobTabs.setEnabled(False)
+        self.btn_makeJobTabs.setText("Add Jobs")
         
     def genParticleSetups(self):
         
-        self.jobTapNrSetUpTaps=1
+        #self.jobTapNrSetUpTaps=1
         #self.tabWidget.removeTab(self.jobTapNrSetUpTaps)
         self.widgets = [] 
         self.layouts = []
@@ -932,18 +950,18 @@ class MainUI(QMainWindow):
             return dims
         if "reconstructionfull"+tag in scheme.jobs_in_scheme.values: 
             xdim = scheme.job_star['reconstructionfull'+tag].dict['joboptions_values'][
-            scheme.job_star['reconstructionfull'].dict['joboptions_values']['rlnJobOptionVariable'] == 'x_dim'
+            scheme.job_star['reconstructionfull'].dict['joboptions_values']['rlnJobOptionVariable'] == 'xdim'
             ]['rlnJobOptionValue'].values[0]
             ydim = scheme.job_star['reconstructionfull'+tag].dict['joboptions_values'][
-            scheme.job_star['reconstructionfull'].dict['joboptions_values']['rlnJobOptionVariable'] == 'y_dim'
+            scheme.job_star['reconstructionfull'].dict['joboptions_values']['rlnJobOptionVariable'] == 'ydim'
             ]['rlnJobOptionValue'].values[0]
             zdim = scheme.job_star['reconstructionfull'+tag].dict['joboptions_values'][
-            scheme.job_star['reconstructionfull'].dict['joboptions_values']['rlnJobOptionVariable'] == 'z_dim'
+            scheme.job_star['reconstructionfull'].dict['joboptions_values']['rlnJobOptionVariable'] == 'zdim'
             ]['rlnJobOptionValue'].values[0]
             return int(xdim),int(ydim),int(zdim)    
         
         if pixS is None:
-            messageBox("Problem","No Reconstruction Job. You cannot run template matching")
+            print("No Reconstruction Job. You cannot run template matching")
             pixS=-1
         
         return pixS    
@@ -1119,7 +1137,7 @@ class MainUI(QMainWindow):
         tomoScale=float(pixSRaw)/float(pixSTomogram)
         szTomoBin = tuple(int(float(x) * tomoScale) for x in sizeTomogram)
         for tmJob in tmJobs:
-            print("check template matching params")
+            print("checking template matching params"+tmJob)
             ind=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionVariable']=="in_3dref"
             templateName=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionValue'][ind].iloc[0]
             ind=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionVariable']=="in_mask"

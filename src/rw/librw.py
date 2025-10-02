@@ -983,12 +983,14 @@ class dataImport():
 class schemeMeta:
   """
   """
-  def __init__(self, schemeFolderPath):
+  def __init__(self, schemeFolderPath,load_master=True):
     self.CRYOBOOST_HOME=os.getenv("CRYOBOOST_HOME")
     self.conf=cbconfig(self.CRYOBOOST_HOME + "/config/conf.yaml")
     self.schemeFilePath=schemeFolderPath+os.path.sep+"scheme.star"
     self.schemeFolderPath=schemeFolderPath
     self.read_scheme()
+    if load_master:
+      self.masterScheme=schemeMeta(self.CRYOBOOST_HOME+"/config/Schemes/warp_tomo_prep/",load_master=False)
     
   def read_scheme(self):
     self.scheme_star=starFileMeta(self.schemeFilePath)
@@ -1002,14 +1004,14 @@ class schemeMeta:
   def getJobOptions(self, jobName):
     return self.job_star[jobName].dict["joboptions_values"]   
   
-  def jobListToNodeList(self,jobList,tag=None):
+  def jobListToNodeList(self,jobList,tag=None,useMaster=False):
     
     Node = namedtuple('Node', ['type', 'tag', 'inputType', 'inputTag'])
     nodes = []
     intag=None
     all_types=[]
     for job in jobList:
-      inputType=self.getInputJobType(job)
+      inputType=self.getInputJobType(job,useMaster)
       if inputType is not None and inputType not in all_types and len(all_types)>0:
           inputType =all_types[-1]
       oneNode = Node(type=job, tag=tag, inputType=inputType, inputTag=intag)
@@ -1092,26 +1094,35 @@ class schemeMeta:
     schemeAdapted=self.filterSchemeByNodes(nodes_df)
     return schemeAdapted
   
-  def addParticleJobs(self,tags):
+  def addParticleJobs(self,tags,replaceNonTaged=True,useMaster=True):
+    
+    
     particleJobs=self.conf.confdata['computing']['JOBTypesApplication']['ParticleJobs']
-    nonParticleJobs=[job for job in self.jobs_in_scheme if job not in set(particleJobs)]
-    nodes,nodes_df=self.jobListToNodeList(nonParticleJobs)
-    for tag in tags:
-      ndf,nodesPlTag_df=self.jobListToNodeList(particleJobs,tag)
-      nodes_df = pd.concat([nodes_df, nodesPlTag_df], ignore_index=True)
-      
-    #nodes_dict = {i: node for i, node in enumerate(nodes)}   
-    #nodes_dict = {i: row.to_dict() for i, row in nodes.iterrows()}
-    #nodes_df = pd.DataFrame.from_dict(nodes_dict, orient='index')
+    if replaceNonTaged:
+      nonParticleJobs=[job for job in self.jobs_in_scheme if job not in set(particleJobs)]
+      nodes,nodes_df=self.jobListToNodeList(nonParticleJobs)
+      for tag in tags:
+        ndf,nodesPlTag_df=self.jobListToNodeList(particleJobs,tag)
+        nodes_df = pd.concat([nodes_df, nodesPlTag_df], ignore_index=True)
+    else:    
+      existingSchemeJobs=self.jobs_in_scheme
+      nodes,nodes_df=self.jobListToNodeList(existingSchemeJobs)
+      for tag in tags:
+        ndf,nodesPlTag_df=self.jobListToNodeList(particleJobs,tag,useMaster=useMaster) 
+        nodes_df = pd.concat([nodes_df, nodesPlTag_df], ignore_index=True)
+        
     schemeAdapted=self.filterSchemeByNodes(nodes_df)
     return schemeAdapted
     
-  def getInputJobType(self, jobName):
+  def getInputJobType(self, jobName,useMaster=False):
 
     if jobName=="importmovies": #first job for every pipeline
       return None
     
-    df = self.job_star[jobName].dict['joboptions_values']
+    if useMaster:
+      df = self.masterScheme.job_star[jobName].dict['joboptions_values']
+    else:
+      df = self.job_star[jobName].dict['joboptions_values']
     ind=df.rlnJobOptionVariable=="input_star_mics"
     if not any(ind):
         ind=df.rlnJobOptionVariable=="in_tiltseries" 
@@ -1132,7 +1143,8 @@ class schemeMeta:
     
    
     filtEdges_df=self.filterEdgesByNodes(self.scheme_star.dict["scheme_edges"], nodes_df)
-    jobStar_dict=self.job_star
+    #jobStar_dict=self.job_star
+    jobStar_dict=self.extend_jobStarDictByNodes_df(self.job_star,nodes_df)
     jobStar_dictFilt=self.filterjobStarByNodes(jobStar_dict,nodes_df,filterMode)
     schemeJobs_dfFilt=self._filterSchemeJobsByNodes(self.scheme_star.dict["scheme_jobs"],nodes_df)
     
@@ -1145,6 +1157,16 @@ class schemeMeta:
     #scFilt.jobTypes_in_scheme = nodes_df["type"].iloc[:]
     
     return scFilt   
+  
+  def extend_jobStarDictByNodes_df(self,jobStar_dict,nodes_df):
+     
+     jobs=self.jobs_in_scheme
+     for index, row in nodes_df.iterrows():
+        if row['type'] not in jobs.values:  
+           #jobStar_dict[row['type']+"_"+row['tag']]=self.masterScheme.job_star[row['type']]
+           jobStar_dict[row['type']]=self.masterScheme.job_star[row['type']]
+
+     return jobStar_dict       
   
   def _filterSchemeJobsByNodes(self,schemJobs,nodes_df):
     
@@ -1174,7 +1196,8 @@ class schemeMeta:
       if row['inputType'] is not None:
         #input=schemeName+row['inputType'] + ('_' + row['inputTag'] if row['inputTag'] != 'None' else '')
           input=schemeName+row['inputType'] + ('_' + str(row['inputTag']) if row['inputTag'] not in [None, 'None'] else '')
-          input=input+os.path.sep+os.path.basename(self.conf.getJobOutput(row['inputType']))
+          jobType=row['inputType'].split("_")[0]
+          input=input+os.path.sep+os.path.basename(self.conf.getJobOutput(jobType))
           ind=df.rlnJobOptionVariable=="input_star_mics"
           if not any(ind):
               ind=df.rlnJobOptionVariable=="in_tiltseries" 
