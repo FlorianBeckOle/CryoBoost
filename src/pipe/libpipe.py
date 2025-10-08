@@ -103,15 +103,21 @@ class pipe:
     self.scheme.update_job_star_dict('importmovies','movie_files',"frames/"+os.path.basename(self.pathFrames))
     self.scheme.update_job_star_dict('importmovies','mdoc_files',"mdoc/"+os.path.basename(self.pathMdoc))
     #import movies and mdoc()  
+  
+  def setScheme(self,scheme):
+    self.scheme=scheme
+        
       
   def writeScheme(self):
      
-     self.generatCrJobLog("initProject","writing Scheme to: " + self.pathProject + "/Schemes" + "\n")
-     path_scheme = os.path.join(self.pathProject, self.scheme.scheme_star.dict['scheme_general']['rlnSchemeName'])
-     nodes = {i: job for i, job in enumerate(self.scheme.jobs_in_scheme)}
-     #self.scheme.filterSchemeByNodes(nodes) #to correct for input output mismatch within the scheme
-     self.scheme.write_scheme(path_scheme)
-     self.scheme.schemeFilePath=path_scheme + "/scheme.star"
+    self.generatCrJobLog("initProject","writing Scheme to: " + self.pathProject + "/Schemes" + "\n")
+    path_scheme = os.path.join(self.pathProject, self.scheme.scheme_star.dict['scheme_general']['rlnSchemeName'])
+  #  nodes = {i: job for i, job in enumerate(self.scheme.jobs_in_scheme)}
+  #  #self.scheme.filterSchemeByNodes(nodes) #to correct for input output mismatch within the scheme
+    self.scheme.write_scheme(path_scheme)
+    self.scheme.schemeFilePath=path_scheme + "/scheme.star"
+  
+    
   
   def initRelionProject(self):
     command=self.commandGui #.replace("--do_projdir","--do_projdir --idle 0")

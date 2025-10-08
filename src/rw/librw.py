@@ -1112,6 +1112,17 @@ class schemeMeta:
         nodes_df = pd.concat([nodes_df, nodesPlTag_df], ignore_index=True)
         
     schemeAdapted=self.filterSchemeByNodes(nodes_df)
+    
+    if replaceNonTaged==False:
+      for i, row in self.scheme_star.dict['scheme_jobs'].iterrows():
+          orgJobNameOrgScheme=row['rlnSchemeJobNameOriginal']
+          ind=schemeAdapted.scheme_star.dict['scheme_jobs']['rlnSchemeJobNameOriginal']==orgJobNameOrgScheme
+          schemeAdapted.scheme_star.dict['scheme_jobs'][ind]=row
+          if tags is None:
+              schemeAdapted.scheme_star.dict['scheme_general']['rlnSchemeCurrentNodeName']=particleJobs[0] 
+          else:
+              schemeAdapted.scheme_star.dict['scheme_general']['rlnSchemeCurrentNodeName']=particleJobs[0] + "_" + next(iter(tags))
+          
     return schemeAdapted
     
   def getInputJobType(self, jobName,useMaster=False):
@@ -1173,6 +1184,8 @@ class schemeMeta:
     schemeJobs_dfFilt = pd.DataFrame(columns=schemJobs.columns)
     for index, row in nodes_df.iterrows():
         new_row=copy.deepcopy(schemJobs.head(1))
+        if row['type'] not in schemJobs['rlnSchemeJobNameOriginal'].values: 
+            new_row['rlnSchemeJobHasStarted']=0
         new_row['rlnSchemeJobNameOriginal']=row['type'] + ('_' + row['tag'] if row['tag'] != None else '')
         new_row['rlnSchemeJobName']=row['type'] + ('_' + row['tag'] if row['tag'] != None else '')
         schemeJobs_dfFilt=pd.concat([schemeJobs_dfFilt,new_row])

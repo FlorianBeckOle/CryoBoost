@@ -147,13 +147,14 @@ class MainUI(QMainWindow):
             print("======> check mdoc invert")
             print("WARNING missing reload of options")
             cbdat.scheme=schemeMeta(args.proj +  "/Schemes/" + args.scheme )
-            args.scheme=cbdat.scheme
+            #args.scheme=cbdat.scheme
             invTilt=self.textEdit_invertTiltAngle.toPlainText()
             if invTilt == "Yes":
                 invTilt=True
             else:
                 invTilt=False
             cbdat.pipeRunner=pipe(args,invMdocTiltAngle=invTilt);
+            cbdat.pipeRunner.scheme.schemeFilePath=str(args.proj) +  "/Schemes/" + args.scheme + "/scheme.star"
             cbdat.args.skipSchemeEdit=True
             cbdat.filtScheme=0
         else:    
@@ -254,8 +255,42 @@ class MainUI(QMainWindow):
         for i, job in enumerate(self.cbdat.scheme.jobs_in_scheme):
             self.table_scheme.setItem(i, 0, QTableWidgetItem(str(job))) 
             self.table_scheme.setItem(i, 1, QTableWidgetItem())
-           
-            
+    
+    def speciesIsValid(self,name,jobs):
+        
+        #tmJobs=jobs[jobs.str.startswith('template')]
+        existingSpecis = jobs[jobs.str.contains('_')].str.split('_').str[1].unique()
+        
+        if "_" in name:
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("Warning: Underscore in Species Name")
+            msg_box.setText("Species name contains underscores ('_').")
+            msg_box.setInformativeText("Remove underscore from species names to continue")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.exec()
+            return False           
+        if name in existingSpecis:
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("Warning: Species Name Already Exists")
+            msg_box.setText(f"Species name '{name}' already exists.")
+            msg_box.setInformativeText("Please choose a different species name")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.exec()
+            return False
+        elif name.strip() == "":
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("Warning: Empty Species Name")
+            msg_box.setText("Species name is empty.")
+            msg_box.setInformativeText("Please provide a valid species name to continue")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.exec()
+            return False
+        else:
+            return True
+
     def makeJobTabsFromScheme(self):
         """
         insert a new tab for every job and place a table with the parameters found in the respective job.star
@@ -269,16 +304,42 @@ class MainUI(QMainWindow):
             if item == "NoiseToNoise Filter":
                 self.cbdat.scheme.addJob("ntn")
             elif item == "Particle Species":
-                speciesName, ok = QInputDialog.getText(None, "Input Dialog", "Enter species name:")
-                self.cbdat.scheme=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
+                while True:
+                    speciesName, ok = QInputDialog.getText(None, "Input Dialog", "Enter species name (without _):")
+                    if ok==False:
+                        return
+                    if self.speciesIsValid(speciesName,self.cbdat.scheme.jobs_in_scheme):
+                        break
+
+                if self.cbdat.pipeRunner is not None:
+                    schemeOnDisk=schemeMeta(os.path.dirname(self.cbdat.pipeRunner.scheme.schemeFilePath))
+                    self.cbdat.scheme=self.updateSchemeFromJobTabs(schemeOnDisk,self.tabWidget)
+                else:
+                    self.cbdat.scheme=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
+                    
                 self.cbdat.scheme=self.cbdat.scheme.addParticleJobs({speciesName},replaceNonTaged=False)
-                while self.tabWidget.count() > 1:
-                    self.tabWidget.removeTab(1)
+                removed_tabs = []
+                exceptions = ["Setup", "Start"]
+                i = 0
+                while i < self.tabWidget.count():
+                    tab_text = self.tabWidget.tabText(i)
+                    if not any(exception in tab_text for exception in exceptions):
+                        removed_tabs.append(tab_text)
+                        self.tabWidget.removeTab(i)
+                    else:
+                        i += 1
+                nrSetupTabs = self.countParticleSetupTabs()+1
+                self.jobTapNrSetUpTaps=nrSetupTabs
                 self.genParticleSetups()
-                insertPosition=2
+                insertPosition=nrSetupTabs+1
                 for job in self.cbdat.scheme.jobs_in_scheme:
                     self.schemeJobToTab(job,self.cbdat.conf,insertPosition)
                     insertPosition += 1  
+                if self.cbdat.pipeRunner is not None:
+                    self.cbdat.pipeRunner.setScheme(self.cbdat.scheme) 
+                    self.cbdat.pipeRunner.writeScheme()
+                self.setPixelSizeToJobTap()
+                self.setNrNodesToJobTap()
             return
             
         self.tabWidget.setTabVisible(1,True)
@@ -337,6 +398,20 @@ class MainUI(QMainWindow):
         self.loadConfig()
         #self.btn_makeJobTabs.setEnabled(False)
         self.btn_makeJobTabs.setText("Add Jobs")
+    
+    def countParticleSetupTabs(self):
+        """Count number of tabs starting with 'ParticleSetup'."""
+        count = 0
+        for i in range(self.tabWidget.count()):
+            if self.tabWidget.tabText(i).startswith("ParticleSetup"):
+                count += 1
+        return count
+    
+    def checkIfJobTabExists(self,tabName):
+        for i in range(self.tabWidget.count()):
+            if tabName in self.tabWidget.tabText(i):
+                return True
+        return False
         
     def genParticleSetups(self):
         
@@ -344,8 +419,17 @@ class MainUI(QMainWindow):
         #self.tabWidget.removeTab(self.jobTapNrSetUpTaps)
         self.widgets = [] 
         self.layouts = []
+        buildTap=False
         for job in self.cbdat.scheme.jobs_in_scheme:
             if job.startswith("templatematching"):
+                tag=job.split("_")
+                if len(tag)>1:
+                    tabName="ParticleSetup_"+tag[1]
+                else:
+                    tabName="ParticleSetup"
+                
+                if self.checkIfJobTabExists(tabName):
+                     continue
                 
                 scroll_area = QScrollArea()
                 scroll_area.setWidgetResizable(True)
@@ -358,11 +442,6 @@ class MainUI(QMainWindow):
                 layout.setSpacing(1)
                 layout.setContentsMargins(1,1, 1, 1)
                 self.layouts.append(layout)
-                tag=job.split("_")
-                if len(tag)>1:
-                    tabName="ParticleSetup_"+tag[1]
-                else:
-                    tabName="ParticleSetup"
                 
                 widget=self.iniWidget(job)
                 layout.addWidget(widget,stretch=0)
@@ -370,15 +449,20 @@ class MainUI(QMainWindow):
                 scroll_area.setWidget(container_widget)
                 self.tabWidget.insertTab(self.jobTapNrSetUpTaps, scroll_area, tabName)
                 self.jobTapNrSetUpTaps+=1   
-
+                buildTap=True
             if job.startswith("tmextractcand"):    
+                if self.checkIfJobTabExists(tabName) and buildTap==False:
+                     continue
                 widget=self.iniWidget(job)
                 layout.addWidget(widget,stretch=0)             
             
             if job.startswith("subtomoExtraction"):    
+                if self.checkIfJobTabExists(tabName) and buildTap==False:
+                     continue
                 widget=self.iniWidget(job)
                 layout.addWidget(widget,stretch=0)  
-        
+                buildTap=False
+                
         for layout in self.layouts:   
             spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
             layout.addItem(spacer)    
@@ -1424,6 +1508,10 @@ class MainUI(QMainWindow):
                 params_dict = {"param2_value": crange}
                 self.setParamsDictToJobTap(params_dict,["tsCtf"])
         
+        line_edits = self.tabWidget.findChildren(QLineEdit, "line_path_partRecPixS")
+        for line_edit in line_edits:
+            current_value = line_edit.text()
+            line_edit.setText(str(float(textline)))
                 
             
     def setdosePerTiltToJobTap(self):
@@ -2039,6 +2127,15 @@ class MainUI(QMainWindow):
         #scheme=self.updateSchemeFromJobTabs(scheme,self.tabWidget)
         #self.cbdat.pipeRunner.writeScheme()
     
+    
+    def find_tab_index_by_name(self, tab_name):
+        """Find tab index by exact name match."""
+        for i in range(self.tabWidget.count()):
+            if self.tabWidget.tabText(i) == tab_name:
+                return i
+        return -1
+
+    
     def updateSchemeFromJobTabs(self,scheme,tabWidget):
         """
         Updates the given scheme by iterating over each job tab in the given tab widget and updating the corresponding job's star file based on the table widget's contents.
@@ -2052,10 +2149,17 @@ class MainUI(QMainWindow):
         """
         
         for job_tab_index in range(1, len(scheme.jobs_in_scheme) + 1):
-            tabWidget.setCurrentIndex(job_tab_index+self.jobTapNrSetUpTaps-1)
+            job_name = scheme.jobs_in_scheme[job_tab_index]
+            tab_index = self.find_tab_index_by_name(job_name)
+            if tab_index == -1:
+                print(f"Warning: Tab not found for job {job_name}")
+                continue
+            
+            tabWidget.setCurrentIndex(tab_index)
             table_widget = tabWidget.currentWidget().findChild(QTableWidget)
             jobName = scheme.jobs_in_scheme[job_tab_index]
-            scheme.job_star[jobName]=self.updateSchemeJobFromTable(scheme.job_star[jobName], table_widget,jobName,self.cbdat.conf)
+            scheme.job_star[jobName]=self.updateSchemeJobFromTable(scheme.job_star[jobName], 
+                                                                   table_widget,jobName,self.cbdat.conf)
 
             
         tabWidget.setCurrentIndex(len(self.cbdat.scheme.jobs_in_scheme) + self.jobTapNrSetUpTaps)
