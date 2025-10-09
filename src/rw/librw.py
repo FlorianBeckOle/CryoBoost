@@ -1024,8 +1024,28 @@ class schemeMeta:
     
     return nodes,nodes_df
   
-  def addNoiseToNoiseFilter(self):
-    pass
+  def addNoiseToNoiseFilter(self,useMaster=False):
+   
+    noise2noiseJobs=self.conf.confdata['computing']['JOBTypesApplication']['Noise2NoiseFilterJobs']
+    existingSchemeJobs=self.jobs_in_scheme
+    nodes,nodes_df=self.jobListToNodeList(existingSchemeJobs)
+    ndf,nodesPlTag_df=self.jobListToNodeList(noise2noiseJobs,tag=None,useMaster=useMaster) 
+    nodes_df = pd.concat([nodes_df, nodesPlTag_df], ignore_index=True)
+      
+    schemeAdapted=self.filterSchemeByNodes(nodes_df)
+    
+    for i, row in self.scheme_star.dict['scheme_jobs'].iterrows():
+        orgJobNameOrgScheme=row['rlnSchemeJobNameOriginal']
+        ind=schemeAdapted.scheme_star.dict['scheme_jobs']['rlnSchemeJobNameOriginal']==orgJobNameOrgScheme
+        schemeAdapted.scheme_star.dict['scheme_jobs'][ind]=row
+    schemeAdapted.scheme_star.dict['scheme_general']['rlnSchemeCurrentNodeName']=noise2noiseJobs[0] 
+          
+    return schemeAdapted
+    
+    
+  
+  
+  
   def removeNoiseToNoiseFilter(self):
     nFilterJobs=self.conf.confdata['computing']['JOBTypesApplication']['Noise2NoiseFilterJobs']
     nonFilterJobs=[job for job in self.jobs_in_scheme if job not in set(nFilterJobs)]

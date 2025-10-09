@@ -297,12 +297,45 @@ class MainUI(QMainWindow):
         file in the ["joboptions_values"] df.
         """
         self.jobTapNrSetUpTaps=1
-        
+            
         if self.btn_makeJobTabs.text()=="Add Jobs":
             items = ("Particle Species","NoiseToNoise Filter")
             item, ok = QInputDialog.getItem(None, "Select job(s) to add to scheme", "Available Job(s)", items, 0, False)
+            if ok == False:
+                return
+            
             if item == "NoiseToNoise Filter":
-                self.cbdat.scheme.addJob("ntn")
+                if "denoisetrain" in self.cbdat.scheme.jobs_in_scheme.values:
+                    QMessageBox.information(None, "Info", "You already have a noise2noise denoising job skipping")
+                    return
+                
+                if self.cbdat.pipeRunner is not None:
+                    schemeOnDisk=schemeMeta(os.path.dirname(self.cbdat.pipeRunner.scheme.schemeFilePath))
+                    self.cbdat.scheme=self.updateSchemeFromJobTabs(schemeOnDisk,self.tabWidget)
+                else:
+                    self.cbdat.scheme=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
+                self.cbdat.scheme=self.cbdat.scheme.addNoiseToNoiseFilter(useMaster=True)
+                removed_tabs = []
+                exceptions = ["Setup", "Start"]
+                i = 0
+                while i < self.tabWidget.count():
+                    tab_text = self.tabWidget.tabText(i)
+                    if not any(exception in tab_text for exception in exceptions):
+                        removed_tabs.append(tab_text)
+                        self.tabWidget.removeTab(i)
+                    else:
+                        i += 1
+                nrSetupTabs = self.countParticleSetupTabs()+1
+                self.jobTapNrSetUpTaps=nrSetupTabs
+                insertPosition=nrSetupTabs
+                insertPositionOrg=insertPosition
+                for job in self.cbdat.scheme.jobs_in_scheme:
+                    self.schemeJobToTab(job,self.cbdat.conf,insertPosition)
+                    insertPosition += 1      
+                if self.cbdat.pipeRunner is not None:
+                    self.cbdat.pipeRunner.setScheme(self.cbdat.scheme) 
+                    self.cbdat.pipeRunner.writeScheme()
+                
             elif item == "Particle Species":
                 while True:
                     speciesName, ok = QInputDialog.getText(None, "Input Dialog", "Enter species name (without _):")
@@ -332,6 +365,7 @@ class MainUI(QMainWindow):
                 self.jobTapNrSetUpTaps=nrSetupTabs
                 self.genParticleSetups()
                 insertPosition=nrSetupTabs+1
+                insertPositionOrg=insertPosition
                 for job in self.cbdat.scheme.jobs_in_scheme:
                     self.schemeJobToTab(job,self.cbdat.conf,insertPosition)
                     insertPosition += 1  
@@ -340,6 +374,10 @@ class MainUI(QMainWindow):
                     self.cbdat.pipeRunner.writeScheme()
                 self.setPixelSizeToJobTap()
                 self.setNrNodesToJobTap()
+                self.tabWidget.setCurrentIndex(insertPositionOrg-1)
+                if self.cbdat.pipeRunner is not None:
+                    QMessageBox.information(None, "Info", "To apply the changes made to setup click on update Scheme")
+            
             return
             
         self.tabWidget.setTabVisible(1,True)
