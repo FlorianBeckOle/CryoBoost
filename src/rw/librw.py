@@ -1038,11 +1038,61 @@ class schemeMeta:
         orgJobNameOrgScheme=row['rlnSchemeJobNameOriginal']
         ind=schemeAdapted.scheme_star.dict['scheme_jobs']['rlnSchemeJobNameOriginal']==orgJobNameOrgScheme
         schemeAdapted.scheme_star.dict['scheme_jobs'][ind]=row
-    schemeAdapted.scheme_star.dict['scheme_general']['rlnSchemeCurrentNodeName']=noise2noiseJobs[0] 
+    if schemeAdapted.scheme_star.dict['scheme_general']['rlnSchemeCurrentNodeName']=='EXIT':
+        schemeAdapted.scheme_star.dict['scheme_general']['rlnSchemeCurrentNodeName']=noise2noiseJobs[0] 
           
     return schemeAdapted
     
+  def compareJobs(self, schemeToComp):
+    """
+    Compare two schemeMeta objects' job_star dictionaries and return formatted string.
+    """
+    differences = []
+    message = "Differences between schemes:\n\n"
     
+    # Compare job keys
+    jobs1 = set(self.job_star.keys())
+    jobs2 = set(schemeToComp.job_star.keys())
+    
+    # Check for missing jobs
+    for job in (jobs1 - jobs2):
+        differences.append(f"Missing in scheme 2: {job}")
+    for job in (jobs2 - jobs1):
+        differences.append(f"Missing in scheme 1: {job}")
+    
+    # Compare common jobs
+    for job in (jobs1 & jobs2):
+        dict1 = self.job_star[job].dict
+        dict2 = schemeToComp.job_star[job].dict
+        
+        # Compare job settings
+        if 'job' in dict1 and 'job' in dict2:
+            for key, value in dict1['job'].items():
+                if key not in dict2['job']:
+                    differences.append(f"{job}: Missing {key}")
+                elif dict1['job'][key] != dict2['job'][key]:
+                    differences.append(f"{job}: {key}\n   1: {dict1['job'][key]}\n   2: {dict2['job'][key]}")
+        
+        # Compare job options
+        if 'joboptions_values' in dict1 and 'joboptions_values' in dict2:
+            df1 = dict1['joboptions_values']
+            df2 = dict2['joboptions_values']
+            
+            if not df1.equals(df2):
+                for idx, row in df1.iterrows():
+                    if idx < len(df2):
+                        if row['rlnJobOptionValue'] != df2.iloc[idx]['rlnJobOptionValue']:
+                            param = row['rlnJobOptionVariable']
+                            differences.append(
+                                f"{job}: {param}\n   1: {row['rlnJobOptionValue']}\n   2: {df2.iloc[idx]['rlnJobOptionValue']}"
+                            )
+    
+    if differences:
+        message += "\n".join(differences)
+    else:
+        message = None
+        
+    return message  
   
   
   
@@ -1138,10 +1188,11 @@ class schemeMeta:
           orgJobNameOrgScheme=row['rlnSchemeJobNameOriginal']
           ind=schemeAdapted.scheme_star.dict['scheme_jobs']['rlnSchemeJobNameOriginal']==orgJobNameOrgScheme
           schemeAdapted.scheme_star.dict['scheme_jobs'][ind]=row
-          if tags is None:
-              schemeAdapted.scheme_star.dict['scheme_general']['rlnSchemeCurrentNodeName']=particleJobs[0] 
-          else:
-              schemeAdapted.scheme_star.dict['scheme_general']['rlnSchemeCurrentNodeName']=particleJobs[0] + "_" + next(iter(tags))
+          if schemeAdapted.scheme_star.dict['scheme_general']['rlnSchemeCurrentNodeName']=='EXIT':
+            if tags is None:
+                schemeAdapted.scheme_star.dict['scheme_general']['rlnSchemeCurrentNodeName']=particleJobs[0] 
+            else:
+                schemeAdapted.scheme_star.dict['scheme_general']['rlnSchemeCurrentNodeName']=particleJobs[0] + "_" + next(iter(tags))
           
     return schemeAdapted
     

@@ -290,7 +290,43 @@ class MainUI(QMainWindow):
             return False
         else:
             return True
-
+    def updateSchemeExecutedJobsAndParametersFromTab(self):
+        if self.cbdat.pipeRunner is not None:
+            schemeOnDisk=schemeMeta(os.path.dirname(self.cbdat.pipeRunner.scheme.schemeFilePath))
+            self.cbdat.scheme=self.updateSchemeFromJobTabs(schemeOnDisk,self.tabWidget)
+        else:
+            self.cbdat.scheme=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
+    
+    
+    def removeJobTabs(self,exceptions=["Setup", "Start"]):
+        removed_tabs = []
+        i = 0
+        while i < self.tabWidget.count():
+            tab_text = self.tabWidget.tabText(i)
+            if not any(exception in tab_text for exception in exceptions):
+                removed_tabs.append(tab_text)
+                self.tabWidget.removeTab(i)
+            else:
+                i += 1
+        return removed_tabs
+    def schemeToJobTabs(self,setToInsertPosition=False):
+        nrSetupTabs = self.countParticleSetupTabs()+1
+        self.jobTapNrSetUpTaps=nrSetupTabs
+        insertPosition=nrSetupTabs
+        insertPositionOrg=insertPosition
+        for job in self.cbdat.scheme.jobs_in_scheme:
+            self.schemeJobToTab(job,self.cbdat.conf,insertPosition)
+            insertPosition += 1      
+        if self.cbdat.pipeRunner is not None:
+            self.cbdat.pipeRunner.setScheme(self.cbdat.scheme) 
+            self.cbdat.pipeRunner.writeScheme()
+        self.updateAllparticleRecPixS()
+        self.setNrNodesToJobTap()
+        if setToInsertPosition:
+            self.tabWidget.setCurrentIndex(insertPositionOrg-1)
+        if self.cbdat.pipeRunner is not None:
+                    QMessageBox.information(None, "Info", "To apply the changes made to setup click on update Scheme(start Relion Tap) before starting the workflow")
+        
     def makeJobTabsFromScheme(self):
         """
         insert a new tab for every job and place a table with the parameters found in the respective job.star
@@ -303,39 +339,14 @@ class MainUI(QMainWindow):
             item, ok = QInputDialog.getItem(None, "Select job(s) to add to scheme", "Available Job(s)", items, 0, False)
             if ok == False:
                 return
-            
             if item == "NoiseToNoise Filter":
                 if "denoisetrain" in self.cbdat.scheme.jobs_in_scheme.values:
                     QMessageBox.information(None, "Info", "You already have a noise2noise denoising job skipping")
                     return
-                
-                if self.cbdat.pipeRunner is not None:
-                    schemeOnDisk=schemeMeta(os.path.dirname(self.cbdat.pipeRunner.scheme.schemeFilePath))
-                    self.cbdat.scheme=self.updateSchemeFromJobTabs(schemeOnDisk,self.tabWidget)
-                else:
-                    self.cbdat.scheme=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
+                self.updateSchemeExecutedJobsAndParametersFromTab()
                 self.cbdat.scheme=self.cbdat.scheme.addNoiseToNoiseFilter(useMaster=True)
-                removed_tabs = []
-                exceptions = ["Setup", "Start"]
-                i = 0
-                while i < self.tabWidget.count():
-                    tab_text = self.tabWidget.tabText(i)
-                    if not any(exception in tab_text for exception in exceptions):
-                        removed_tabs.append(tab_text)
-                        self.tabWidget.removeTab(i)
-                    else:
-                        i += 1
-                nrSetupTabs = self.countParticleSetupTabs()+1
-                self.jobTapNrSetUpTaps=nrSetupTabs
-                insertPosition=nrSetupTabs
-                insertPositionOrg=insertPosition
-                for job in self.cbdat.scheme.jobs_in_scheme:
-                    self.schemeJobToTab(job,self.cbdat.conf,insertPosition)
-                    insertPosition += 1      
-                if self.cbdat.pipeRunner is not None:
-                    self.cbdat.pipeRunner.setScheme(self.cbdat.scheme) 
-                    self.cbdat.pipeRunner.writeScheme()
-                
+                self.removeJobTabs(exceptions=["Setup", "Start"]) 
+                self.schemeToJobTabs()
             elif item == "Particle Species":
                 while True:
                     speciesName, ok = QInputDialog.getText(None, "Input Dialog", "Enter species name (without _):")
@@ -343,41 +354,11 @@ class MainUI(QMainWindow):
                         return
                     if self.speciesIsValid(speciesName,self.cbdat.scheme.jobs_in_scheme):
                         break
-
-                if self.cbdat.pipeRunner is not None:
-                    schemeOnDisk=schemeMeta(os.path.dirname(self.cbdat.pipeRunner.scheme.schemeFilePath))
-                    self.cbdat.scheme=self.updateSchemeFromJobTabs(schemeOnDisk,self.tabWidget)
-                else:
-                    self.cbdat.scheme=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
-                    
+                self.updateSchemeExecutedJobsAndParametersFromTab()        
                 self.cbdat.scheme=self.cbdat.scheme.addParticleJobs({speciesName},replaceNonTaged=False)
-                removed_tabs = []
-                exceptions = ["Setup", "Start"]
-                i = 0
-                while i < self.tabWidget.count():
-                    tab_text = self.tabWidget.tabText(i)
-                    if not any(exception in tab_text for exception in exceptions):
-                        removed_tabs.append(tab_text)
-                        self.tabWidget.removeTab(i)
-                    else:
-                        i += 1
-                nrSetupTabs = self.countParticleSetupTabs()+1
-                self.jobTapNrSetUpTaps=nrSetupTabs
+                self.removeJobTabs(exceptions=["Setup", "Start"])
                 self.genParticleSetups()
-                insertPosition=nrSetupTabs+1
-                insertPositionOrg=insertPosition
-                for job in self.cbdat.scheme.jobs_in_scheme:
-                    self.schemeJobToTab(job,self.cbdat.conf,insertPosition)
-                    insertPosition += 1  
-                if self.cbdat.pipeRunner is not None:
-                    self.cbdat.pipeRunner.setScheme(self.cbdat.scheme) 
-                    self.cbdat.pipeRunner.writeScheme()
-                self.setPixelSizeToJobTap()
-                self.setNrNodesToJobTap()
-                self.tabWidget.setCurrentIndex(insertPositionOrg-1)
-                if self.cbdat.pipeRunner is not None:
-                    QMessageBox.information(None, "Info", "To apply the changes made to setup click on update Scheme")
-            
+                self.schemeToJobTabs(setToInsertPosition=True)
             return
             
         self.tabWidget.setTabVisible(1,True)
@@ -1250,7 +1231,6 @@ class MainUI(QMainWindow):
     
     def preFlightParameterTest(self):
         
-        
         s=self.cbdat.scheme.jobs_in_scheme
         tmJobs =s[s.str.startswith('templatematching')]
         pixSTomogram=self.getReconstructionPixelSizeFromJobTab()
@@ -1259,7 +1239,7 @@ class MainUI(QMainWindow):
         tomoScale=float(pixSRaw)/float(pixSTomogram)
         szTomoBin = tuple(int(float(x) * tomoScale) for x in sizeTomogram)
         for tmJob in tmJobs:
-            print("checking template matching params"+tmJob)
+            print("checking template matching param of: "+tmJob)
             ind=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionVariable']=="in_3dref"
             templateName=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionValue'][ind].iloc[0]
             ind=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionVariable']=="in_mask"
@@ -1546,10 +1526,16 @@ class MainUI(QMainWindow):
                 params_dict = {"param2_value": crange}
                 self.setParamsDictToJobTap(params_dict,["tsCtf"])
         
+        self.updateAllparticleRecPixS()
+    
+    def updateAllparticleRecPixS(self,pixS=None):
+        if pixS is None:
+            pixS=self.textEdit_pixelSize.toPlainText()
+        
         line_edits = self.tabWidget.findChildren(QLineEdit, "line_path_partRecPixS")
         for line_edit in line_edits:
             current_value = line_edit.text()
-            line_edit.setText(str(float(textline)))
+            line_edit.setText(str(float(pixS)))
                 
             
     def setdosePerTiltToJobTap(self):
@@ -1882,6 +1868,9 @@ class MainUI(QMainWindow):
             return
         print(self.cbdat.pipeRunner.getCurrentNodeScheme())
         
+        #check for input
+        #if self.cbdat.projectpath:
+        
         if self.cbdat.pipeRunner.getCurrentNodeScheme()=="EXIT":
             reply = QMessageBox.question(self, 'Workflow has finished!',
                                  "WorkFlow has finished. To run it again on new data you need to reset the workflow head. Do you want to reset the workflow head?",
@@ -1891,6 +1880,19 @@ class MainUI(QMainWindow):
                 self.cbdat.pipeRunner.setCurrentNodeScheme("WAIT")
             else:
                 return    
+        schemeOnDisk=schemeMeta(os.path.dirname(self.cbdat.pipeRunner.scheme.schemeFilePath))
+        schemeInGui=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
+        differnces=schemeInGui.compareJobs(schemeOnDisk)
+        if (differnces is not None):
+            reply = QMessageBox.question(self, 'Workflow modified but not updated',
+                                 "Do you want to update the workflow and start\n"+differnces,
+                                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
+            if reply == QMessageBox.StandardButton.Yes:
+                self.cbdat.pipeRunner.setScheme(schemeInGui) 
+                self.cbdat.pipeRunner.writeScheme()
+            if reply == QMessageBox.StandardButton.No:
+                return       
+        
         parameterOk=self.preFlightParameterTest()
         
         if parameterOk:
