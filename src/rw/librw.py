@@ -1043,37 +1043,44 @@ class schemeMeta:
           
     return schemeAdapted
     
-  def compareJobs(self, schemeToComp):
+  def compareJobs(self, schemeToComp, label1="Scheme 1", label2="Scheme 2", max_length=None):
     """
     Compare two schemeMeta objects' job_star dictionaries and return formatted string.
+    
+    Args:
+        schemeToComp: Second scheme to compare against
+        label1 (str): Label for first scheme (default "Scheme 1")
+        label2 (str): Label for second scheme (default "Scheme 2") 
+        max_length (int): Maximum length of return message (None for no limit)
+    
+    Returns:
+        str: Formatted comparison message or None if no differences
     """
     differences = []
-    message = "Differences between schemes:\n\n"
+    message = f"Differences between {label1} and {label2}:\n"
     
-    # Compare job keys
     jobs1 = set(self.job_star.keys())
     jobs2 = set(schemeToComp.job_star.keys())
     
-    # Check for missing jobs
     for job in (jobs1 - jobs2):
-        differences.append(f"Missing in scheme 2: {job}")
+        differences.append(f"Missing in {label2}: {job}")
     for job in (jobs2 - jobs1):
-        differences.append(f"Missing in scheme 1: {job}")
-    
-    # Compare common jobs
+        differences.append(f"Missing in {label1}: {job}")
     for job in (jobs1 & jobs2):
         dict1 = self.job_star[job].dict
         dict2 = schemeToComp.job_star[job].dict
         
-        # Compare job settings
         if 'job' in dict1 and 'job' in dict2:
             for key, value in dict1['job'].items():
                 if key not in dict2['job']:
                     differences.append(f"{job}: Missing {key}")
                 elif dict1['job'][key] != dict2['job'][key]:
-                    differences.append(f"{job}: {key}\n   1: {dict1['job'][key]}\n   2: {dict2['job'][key]}")
+                    differences.append(
+                        f"{job}: {key}\n"
+                        f"   {label1}: {dict1['job'][key]}\n"
+                        f"   {label2}: {dict2['job'][key]}"
+                    )
         
-        # Compare job options
         if 'joboptions_values' in dict1 and 'joboptions_values' in dict2:
             df1 = dict1['joboptions_values']
             df2 = dict2['joboptions_values']
@@ -1084,16 +1091,19 @@ class schemeMeta:
                         if row['rlnJobOptionValue'] != df2.iloc[idx]['rlnJobOptionValue']:
                             param = row['rlnJobOptionVariable']
                             differences.append(
-                                f"{job}: {param}\n   1: {row['rlnJobOptionValue']}\n   2: {df2.iloc[idx]['rlnJobOptionValue']}"
+                                f"{job}: {param}\n"
+                                f"   {label1}: {row['rlnJobOptionValue']}\n"
+                                f"   {label2}: {df2.iloc[idx]['rlnJobOptionValue']}"
                             )
     
     if differences:
-        message += "\n".join(differences)
+        full_message = message + "\n".join(differences)
+        if max_length and len(full_message) > max_length:
+            # Cut message and add indicator
+            return full_message[:max_length] + "\n... (message truncated)"
+        return full_message
     else:
-        message = None
-        
-    return message  
-  
+        return None
   
   
   def removeNoiseToNoiseFilter(self):
@@ -1659,3 +1669,4 @@ class tiltSeriesMeta:
         
       
       
+# %%

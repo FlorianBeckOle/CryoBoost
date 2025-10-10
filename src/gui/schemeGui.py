@@ -317,11 +317,12 @@ class MainUI(QMainWindow):
         for job in self.cbdat.scheme.jobs_in_scheme:
             self.schemeJobToTab(job,self.cbdat.conf,insertPosition)
             insertPosition += 1      
+        self.updateAllparticleRecPixS()
+        self.setNrNodesToJobTap()
+        self.cbdat.scheme=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
         if self.cbdat.pipeRunner is not None:
             self.cbdat.pipeRunner.setScheme(self.cbdat.scheme) 
             self.cbdat.pipeRunner.writeScheme()
-        self.updateAllparticleRecPixS()
-        self.setNrNodesToJobTap()
         if setToInsertPosition:
             self.tabWidget.setCurrentIndex(insertPositionOrg-1)
         if self.cbdat.pipeRunner is not None:
@@ -416,6 +417,7 @@ class MainUI(QMainWindow):
             #self.setParamsDictToJobTap(params_dict)
         self.loadConfig()
         #self.btn_makeJobTabs.setEnabled(False)
+        self.setNrNodesToJobTap()
         self.btn_makeJobTabs.setText("Add Jobs")
     
     def countParticleSetupTabs(self):
@@ -1882,10 +1884,10 @@ class MainUI(QMainWindow):
                 return    
         schemeOnDisk=schemeMeta(os.path.dirname(self.cbdat.pipeRunner.scheme.schemeFilePath))
         schemeInGui=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
-        differnces=schemeInGui.compareJobs(schemeOnDisk)
+        differnces=schemeInGui.compareJobs(schemeOnDisk,'GUI:','File:',1000)
         if (differnces is not None):
             reply = QMessageBox.question(self, 'Workflow modified but not updated',
-                                 "Do you want to update the workflow and start\n"+differnces,
+                                 "Do you want to update the workflow and start\n\n"+differnces,
                                  QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
             if reply == QMessageBox.StandardButton.Yes:
                 self.cbdat.pipeRunner.setScheme(schemeInGui) 
