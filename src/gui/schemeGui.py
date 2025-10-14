@@ -65,6 +65,27 @@ class MainUI(QMainWindow):
             self.makeJobTabsFromScheme()
     
     
+    def getUserInformation(self):
+        import pwd
+        userName = os.getenv('USER')
+        uInfo = pwd.getpwnam(userName)
+        uid=uInfo.pw_uid
+        gid=uInfo.pw_gid
+        try:
+            proc = subprocess.run(['getent', 'group'], capture_output=True, text=True)
+            for line in proc.stdout.splitlines():
+                group_info = line.split(':')
+                if len(group_info) >= 4:  # Valid group entry
+                    groupN = group_info[0]
+                    groupID = group_info[2]
+                    mainG= group_info[1]
+                    if int(groupID)==int(gid) and str(mainG)=="*":
+                        groupName=groupN
+            return userName,groupName
+        except Exception as e:
+            print(f"Error getting groups: {e}")
+            return []
+        
     def adaptWidgetsToJobsInScheme(self):
         
         if "fsMotionAndCtf" in self.cbdat.scheme.jobs_in_scheme.values:
@@ -96,7 +117,25 @@ class MainUI(QMainWindow):
         
         if "aligntiltsWarp" in self.cbdat.scheme.jobs_in_scheme.values:
             with QSignalBlocker(self.dropDown_tomoAlignProgram):
-                self.dropDown_tomoAlignProgram.addItem("Aretomo3")    
+                self.dropDown_tomoAlignProgram.addItem("Aretomo3")  
+        
+        userName,userGroup=self.getUserInformation()
+        comp=self.cbdat.conf.confdata['computing']
+        available_partitions = []
+        for partition, config in self.cbdat.conf.confdata['computing'].items():
+            if not isinstance(config, dict) or 'NrGPU' not in config:
+                continue
+            if 'Access' in config:
+                access = config['Access']
+                if access == 'All' or userGroup in access: 
+                    available_partitions.append(partition)
+        
+        if available_partitions == []:
+            print("Warning available partitions not configured default from GUI used")
+        else:
+            self.dropDown_partitionName.clear()
+            self.dropDown_partitionName.addItems(available_partitions)          
+    
     
     def selSystemComponents(self):
         system = type('', (), {})() 
@@ -336,7 +375,7 @@ class MainUI(QMainWindow):
         self.jobTapNrSetUpTaps=1
             
         if self.btn_makeJobTabs.text()=="Add Jobs":
-            items = ("Particle Species","NoiseToNoise Filter")
+            items = ("Particle Setup(TemplateMatching,ParticleExt,PaticleRec)","NoiseToNoise Filter")
             item, ok = QInputDialog.getItem(None, "Select job(s) to add to scheme", "Available Job(s)", items, 0, False)
             if ok == False:
                 return
@@ -348,7 +387,7 @@ class MainUI(QMainWindow):
                 self.cbdat.scheme=self.cbdat.scheme.addNoiseToNoiseFilter(useMaster=True)
                 self.removeJobTabs(exceptions=["Setup", "Start"]) 
                 self.schemeToJobTabs()
-            elif item == "Particle Species":
+            elif item == "Particle Setup(TemplateMatching,ParticleExt,PaticleRec)":
                 while True:
                     speciesName, ok = QInputDialog.getText(None, "Input Dialog", "Enter species name (without _):")
                     if ok==False:

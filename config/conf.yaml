@@ -6,12 +6,12 @@
 submission:
   - HeadNode: hpcl8001 
     SshCommand: "ssh -Y"
-    Environment: "module purge;module load intel/18.0.5;module load impi/2018.4;module load IMOD/4.12.17;module load RELION/5.0.0NC;module load WARP/2.0.0dev29; source /fs/pool/pool-fbeck/projects/4TomoPipe/rel5Pipe/src/CryoBoost/.cbenv"
+    Environment: "source /fs/pool/pool-fbeck/projects/4TomoPipe/rel5Pipe/src/CryoBoost/.cbenv;module purge;module load intel/18.0.5;module load impi/2018.4;module load IMOD/4.12.17;module load RELION/5.0.0NC;module load WARP/2.0.0dev29"
     CalusterStatus: sinfo
     Helpssh: c-wing-wiki.biochem.mpg.de/wiki/index.php/Ssh-keygen
     HelpConflict: "rmove relion/python from your .bashrc hpcl8 or global section"
 local:
-    Environment: "module purge;module load RELION/5.0-beta-3; module load WARP/2.0.0dev29; module load IMOD; module load CHIMERA; module load PYMOL; module load CISTEM"
+    Environment: "source /fs/pool/pool-fbeck/projects/4TomoPipe/rel5Pipe/src/CryoBoost/.cbenv;module purge;module load RELION/5.0-beta-3; module load WARP/2.0.0dev29; module load IMOD; module load CHIMERA; module load PYMOL; module load CISTEM"
 
 aliases:
   - Job: all
@@ -97,25 +97,25 @@ computing:
       NrCPU: 24
       RAM: 370G
       VRAM: 16G
-
+      Access: All
   p.hpcl9:
       NrGPU: 4
       NrCPU: 72
       RAM: 970G
       VRAM: 48G
-
+      Access: b_cryo-em_tech,b_briggs
   p.hpcl93:
       NrGPU: 4
       NrCPU: 128
       RAM: 740G
       VRAM: 48G  
-  
-  local.hpcl58:
-      NrGPU: 2
-      NrCPU: 32
-      RAM: 300G
-      VRAM: 48G
-
+      Access: All
+  # local.hpcl58:
+  #     NrGPU: 2
+  #     NrCPU: 32
+  #     RAM: 300G
+  #     VRAM: 48G
+  #     Access: All
 
   NODE-Sharing:
     CPU-PerGPU: 6

@@ -28,6 +28,7 @@ export PATH=/fs/pool/pool-bmapps/hpcl8/sys/soft/modules/4.2.1/localFold/bin:/usr
 unset LD_LIBRARY_PATH
 
 #build up environment variables
+source /fs/pool/pool-fbeck/projects/4TomoPipe/rel5Pipe/src/CryoBoost/.cbenv
 module load intel/18.0.5
 module load impi/2018.4
 module load IMOD/4.12.17
@@ -35,7 +36,6 @@ module load jdk
 module load ARETOMO2/1.1.2
 module load RELION/5.0.0NC
 module load PYTOM-TM/0.7.10
-source /fs/pool/pool-fbeck/projects/4TomoPipe/rel5Pipe/src/CryoBoost/.cbenv
 
 module list
 echo "submitting relion"
