@@ -1,5 +1,6 @@
 import sys
 import os
+from exceptiongroup import catch
 import pandas as pd
 import numpy as np
 import glob,random  
@@ -23,6 +24,7 @@ from src.misc.libimVol import processVolume
 from src.misc.eerSampling import get_EERsections_per_frame
 import subprocess, shutil
 from PyQt6.QtCore import QTimer 
+from termcolor import cprint
 import mrcfile
 import datetime
 
@@ -63,7 +65,7 @@ class MainUI(QMainWindow):
         
         if (self.cbdat.args.autoGen or self.cbdat.args.skipSchemeEdit):
             self.makeJobTabsFromScheme()
-    
+        
     
     def getUserInformation(self):
         import pwd
@@ -118,7 +120,19 @@ class MainUI(QMainWindow):
         if "aligntiltsWarp" in self.cbdat.scheme.jobs_in_scheme.values:
             with QSignalBlocker(self.dropDown_tomoAlignProgram):
                 self.dropDown_tomoAlignProgram.addItem("Aretomo3")  
-        
+            self.textEdit_refineTiltAxisNrTomo.setEnabled(True)
+            self.textEdit_refineTiltAxisIter.setEnabled(True)
+            self.textEdit_areTomoPatch.setEnabled(True)
+            self.dropDown_doRefineTiltAxis.setEnabled(True)
+            self.textEdit_algRescaleTilts.setEnabled(True)#dropDown_doRefineTiltAxis
+            
+        if "aligntilts" in self.cbdat.scheme.jobs_in_scheme.values:
+            self.textEdit_refineTiltAxisNrTomo.setEnabled(False)
+            self.textEdit_refineTiltAxisIter.setEnabled(False)
+            self.textEdit_areTomoPatch.setEnabled(False)
+            self.dropDown_doRefineTiltAxis.setEnabled(False)
+            self.textEdit_algRescaleTilts.setEnabled(False)#dropDown_doRefineTiltAxis
+            
         userName,userGroup=self.getUserInformation()
         comp=self.cbdat.conf.confdata['computing']
         available_partitions = []
@@ -135,7 +149,14 @@ class MainUI(QMainWindow):
         else:
             self.dropDown_partitionName.clear()
             self.dropDown_partitionName.addItems(available_partitions)          
-    
+        if "fsMotionAndCtf" in self.cbdat.scheme.jobs_in_scheme.values:
+            self.dropDown_nrNodes.setCurrentIndex(0)
+            self.dropDown_jobSize.setCurrentIndex(0)
+        else:
+            self.dropDown_nrNodes.setCurrentIndex(1)
+            self.dropDown_jobSize.setCurrentIndex(1)
+        
+                         
     
     def selSystemComponents(self):
         system = type('', (), {})() 
@@ -193,6 +214,7 @@ class MainUI(QMainWindow):
             else:
                 invTilt=False
             cbdat.pipeRunner=pipe(args,invMdocTiltAngle=invTilt);
+            cbdat.pipeRunner.scheme=cbdat.scheme
             cbdat.pipeRunner.scheme.schemeFilePath=str(args.proj) +  "/Schemes/" + args.scheme + "/scheme.star"
             cbdat.args.skipSchemeEdit=True
             cbdat.filtScheme=0
@@ -278,8 +300,6 @@ class MainUI(QMainWindow):
         self.dropDown_nrNodes.activated.connect(self.setNrNodesToJobTap)
         self.dropDown_partitionName.activated.connect(self.setNrNodesToJobTap)
         self.checkBox_shareNodes.stateChanged.connect(self.setNrNodesToJobTap)
-        self.dropDown_nrNodes.setCurrentIndex(2)
-        self.dropDown_jobSize.setCurrentIndex(1)
         self.dropDown_jobSize.activated.connect(self.setNrNodesFromJobSize)
         for i in self.cbdat.conf.microscope_presets:
             self.dropDown_config.addItem(self.cbdat.conf.microscope_presets[i])
@@ -457,6 +477,7 @@ class MainUI(QMainWindow):
         self.loadConfig()
         #self.btn_makeJobTabs.setEnabled(False)
         self.setNrNodesToJobTap()
+        self.setPixelSizeToJobTap() 
         self.btn_makeJobTabs.setText("Add Jobs")
     
     def countParticleSetupTabs(self):
@@ -1026,7 +1047,12 @@ class MainUI(QMainWindow):
         result = self.template_dialog.exec()
         with QSignalBlocker(text_field):
             text_field.setText(self.template_dialog.line_edit_mapFile.text())
-        params_dict = {"in_3dref":os.path.abspath(text_field.text()) }
+        if text_field.text()=="":
+            absPathToTemplate="None"
+            text_field.setText("None")
+        else:
+            absPathToTemplate=os.path.abspath(text_field.text())
+        params_dict = {"in_3dref": absPathToTemplate}
         jobTag=self.getTagFromCurrentTab()
         self.setParamsDictToJobTap(params_dict,["templatematching"+jobTag])
     
@@ -1051,11 +1077,12 @@ class MainUI(QMainWindow):
     
     def getReconstructionPixelSizeFromJobTab(self):
         
-        widget = self.tabWidget.currentWidget()
-        index = self.tabWidget.indexOf(widget)
+        # widget = self.tabWidget.currentWidget()
+        # index = self.tabWidget.indexOf(widget)
+        # self.tabWidget.setCurrentIndex(index)
+        # tag=self.getTagFromCurrentTab()
+        tag=""
         scheme=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
-        self.tabWidget.setCurrentIndex(index)
-        tag=self.getTagFromCurrentTab()
         
         if "tsReconstruct"+tag in scheme.jobs_in_scheme.values: 
             pixS=scheme.job_star['tsReconstruct'+tag].dict['joboptions_values']['rlnJobOptionValue'][9]
@@ -1065,7 +1092,6 @@ class MainUI(QMainWindow):
             scheme.job_star['reconstructionfull'].dict['joboptions_values']['rlnJobOptionVariable'] == 'binned_angpix'
             ]['rlnJobOptionValue'].values[0]
             return pixS    
-        
         if "tsReconstruct" in scheme.jobs_in_scheme.values: 
             pixS=scheme.job_star['tsReconstruct'].dict['joboptions_values']['rlnJobOptionValue'][9]
             return pixS
@@ -1082,11 +1108,12 @@ class MainUI(QMainWindow):
         return pixS
     def getReconstructionSizeFromJobTab(self):
         
-        widget = self.tabWidget.currentWidget()
-        index = self.tabWidget.indexOf(widget)
+        # widget = self.tabWidget.currentWidget()
+        # index = self.tabWidget.indexOf(widget)
+        # self.tabWidget.setCurrentIndex(index)
+        # tag=self.getTagFromCurrentTab()
+        tag=""
         scheme=self.updateSchemeFromJobTabs(self.cbdat.scheme,self.tabWidget)
-        self.tabWidget.setCurrentIndex(index)
-        tag=self.getTagFromCurrentTab()
         
         if "tsReconstruct"+tag in scheme.jobs_in_scheme.values: 
             tomoSz=scheme.job_star['aligntiltsWarp'+tag].dict['joboptions_values']['rlnJobOptionValue'][9]
@@ -1270,47 +1297,60 @@ class MainUI(QMainWindow):
         
         return resizedVolNameB
     
+    def calcScaledTomoSize(self):
+        try:
+            pixSTomogram=self.getReconstructionPixelSizeFromJobTab()
+            pixSRaw=self.getRawPixelSizeFromJobTab()
+            sizeTomogram=self.getReconstructionSizeFromJobTab()
+            tomoScale=float(pixSRaw)/float(pixSTomogram)
+            szTomoBin = tuple(int(float(x) * tomoScale) for x in sizeTomogram)
+        except Exception as e:
+            #print("Error in calcScaledTomoSize:", e)
+            return None,None
+        return szTomoBin,pixSTomogram
+        
+    
     def preFlightParameterTest(self):
         
         s=self.cbdat.scheme.jobs_in_scheme
         tmJobs =s[s.str.startswith('templatematching')]
-        pixSTomogram=self.getReconstructionPixelSizeFromJobTab()
-        pixSRaw=self.getRawPixelSizeFromJobTab()
-        sizeTomogram=self.getReconstructionSizeFromJobTab()
-        tomoScale=float(pixSRaw)/float(pixSTomogram)
-        szTomoBin = tuple(int(float(x) * tomoScale) for x in sizeTomogram)
+        szTomoBin,pixSTomogram=self.calcScaledTomoSize()
         for tmJob in tmJobs:
-            print("checking template matching param of: "+tmJob)
+            print("checking template matching param of: "+tmJob+"...",end="")
             ind=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionVariable']=="in_3dref"
             templateName=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionValue'][ind].iloc[0]
             ind=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionVariable']=="in_mask"
             maskName=self.cbdat.scheme.getJobOptions(tmJob)['rlnJobOptionValue'][ind].iloc[0]
-            if os.path.exists(templateName):
+            if os.path.exists(templateName) and os.path.isfile(templateName):
                 with mrcfile.open(templateName, header_only=True) as mrc:
                     pixSTemplate = mrc.voxel_size.x
                     boxsizeTemplate = mrc.header.nx                                 
             else:
                 messageBox("Problem","Template:" + templateName + " cannot be read \n Check template")
                 return False
-            if os.path.exists(maskName):
+            if os.path.exists(maskName) and os.path.isfile(maskName):
                 with mrcfile.open(maskName, header_only=True) as mrc:
                     pixSMask = mrc.voxel_size.x
                     boxsizeMask = mrc.header.nx 
             else:
                 messageBox("Problem","Mask:" + maskName + " cannot be read \n Check mask")
                 return False         
-            #if not (pixSTemplate==pixSMask==pixSTomogram):
+            
             tol = 1e-9
             pix_vals = np.array([pixSTemplate, pixSMask, pixSTomogram], dtype=float)
             if not np.allclose(pix_vals, pix_vals[0], atol=tol):
                 messageBox("Problem:","Pixelsize does not match: pixSTemplate:"+str(pixSTemplate)+" pixSMask:"+str(pixSMask)+" pixSTomogram:"+str(pixSTomogram))
+                cprint("FAIL", "red", "on_black", attrs=["bold"])
                 return False
             if not (boxsizeTemplate==boxsizeMask):
                 messageBox("Problem","Boxsize mask vs template does not match: boxsizeTemplate:"+str(boxsizeTemplate)+" boxsizeMask:"+str(boxsizeMask))
+                cprint("FAIL", "red", "on_black", attrs=["bold"])
                 return False
             if boxsizeTemplate>min(szTomoBin):
                 messageBox("Problem","Boxsize template is larger than binned tomogram size: boxsizeTemplate:"+str(boxsizeTemplate)+" sizeTomoBin:"+str(min(szTomoBin)))
+                cprint("FAIL", "red", "on_black", attrs=["bold"])
                 return False
+            cprint("Ok", "green", "on_black", attrs=["bold"])
         return True
         
     def browseTmVolumeTemplate(self):
@@ -1541,8 +1581,12 @@ class MainUI(QMainWindow):
             bin4Pixs=str(float(textline)*4)
             self.textEdit_algRescaleTilts.setText(bin4Pixs)
             self.textEdit_recVoxelSize.setText(bin4Pixs)
-        if "fsMotionAndCtf" in self.cbdat.scheme.jobs_in_scheme.values:
+        try:
             nyPixs=(float(textline)*2)+0.2
+        except ValueError:
+            messageBox("Problem","Pixel size is not a number")
+            return
+        if "fsMotionAndCtf" in self.cbdat.scheme.jobs_in_scheme.values:
             valCRangeMax=self.cbdat.scheme.getJobOptions("fsMotionAndCtf").loc[
                              self.cbdat.scheme.getJobOptions("fsMotionAndCtf")["rlnJobOptionVariable"] == "param7_value",
                              "rlnJobOptionValue"
@@ -1555,7 +1599,6 @@ class MainUI(QMainWindow):
                 self.setParamsDictToJobTap(params_dict,["fsMotionAndCtf"])
         
         if "tsCtf" in self.cbdat.scheme.jobs_in_scheme.values:
-            nyPixs=(float(textline)*2)+0.2
             valCRangeMax=self.cbdat.scheme.getJobOptions("tsCtf").loc[
                              self.cbdat.scheme.getJobOptions("tsCtf")["rlnJobOptionVariable"] == "param2_value",
                              "rlnJobOptionValue"
@@ -1696,7 +1739,6 @@ class MainUI(QMainWindow):
         self.setParamsDictToJobTap(params_dict,["tsCtf"]) 
         
         
-        
     def setRecVoxelSizeToJobTap(self):
         if "reconstructionsplit" in self.cbdat.scheme.jobs_in_scheme.values or "reconstructionfull" in self.cbdat.scheme.jobs_in_scheme.values: 
             params_dict = {"binned_angpix": self.textEdit_recVoxelSize.toPlainText()} 
@@ -1705,21 +1747,40 @@ class MainUI(QMainWindow):
         if "tsReconstruct" in self.cbdat.scheme.jobs_in_scheme.values: 
             params_dict = {"param1_value": self.textEdit_recVoxelSize.toPlainText()} 
             self.setParamsDictToJobTap(params_dict,["tsReconstruct"])
+        szTomoBin,pixSTomogram=self.calcScaledTomoSize()
+        if szTomoBin is not None:
+            self.label_recTomoSizeBinApp.setText(str(szTomoBin[0])+"x"+str(szTomoBin[1])+"x"+str(szTomoBin[2]))
+            self.label_recTomoSizeBinApp.setStyleSheet("color: green; font-weight: bold")
+        else:
+            self.label_recTomoSizeBinApp.setText("Error: Unable to calculate tomogram size check params")
+            self.label_recTomoSizeBinApp.setStyleSheet("color: red;font-weight: bold") 
+               
     def setRecTomosizeToJobTap(self):
-        if "reconstructionsplit" in self.cbdat.scheme.jobs_in_scheme.values or "reconstructionfull" in self.cbdat.scheme.jobs_in_scheme.values: 
-            params_dict = {}
-            dims = self.textEdit_recTomosize.toPlainText().split("x")
-            params_dict["xdim"] = dims[0]
-            params_dict["ydim"] = dims[1]
-            params_dict["zdim"] = dims[2]
-            self.setParamsDictToJobTap(params_dict,["reconstructionsplit"])
-            self.setParamsDictToJobTap(params_dict,["reconstructionfull"])
-        if "tsReconstruct" in self.cbdat.scheme.jobs_in_scheme.values: 
-            tomoSz=self.textEdit_recTomosize.toPlainText().split("x")
-            tomoSz=str(tomoSz[1])+"x"+str(tomoSz[0])+"x"+str(tomoSz[2])
-            params_dict = {"param1_value": tomoSz} 
-            self.setParamsDictToJobTap(params_dict,["aligntiltsWarp"])
-
+        try:
+            if "reconstructionsplit" in self.cbdat.scheme.jobs_in_scheme.values or "reconstructionfull" in self.cbdat.scheme.jobs_in_scheme.values: 
+                params_dict = {}
+                dims = self.textEdit_recTomosize.toPlainText().split("x")
+                params_dict["xdim"] = dims[0]
+                params_dict["ydim"] = dims[1]
+                params_dict["zdim"] = dims[2]
+                self.setParamsDictToJobTap(params_dict,["reconstructionsplit"])
+                self.setParamsDictToJobTap(params_dict,["reconstructionfull"])
+            if "tsReconstruct" in self.cbdat.scheme.jobs_in_scheme.values: 
+                tomoSz=self.textEdit_recTomosize.toPlainText().split("x")
+                tomoSz=str(tomoSz[1])+"x"+str(tomoSz[0])+"x"+str(tomoSz[2])
+                params_dict = {"param1_value": tomoSz} 
+                self.setParamsDictToJobTap(params_dict,["aligntiltsWarp"])
+        except Exception as e:
+            pass
+        
+        szTomoBin,pixSTomogram=self.calcScaledTomoSize()
+        if szTomoBin is not None:
+            self.label_recTomoSizeBinApp.setText(str(szTomoBin[0])+"x"+str(szTomoBin[1])+"x"+str(szTomoBin[2]))
+            self.label_recTomoSizeBinApp.setStyleSheet("color: green; font-weight: bold")
+        else:
+            self.label_recTomoSizeBinApp.setText("Error: Unable to calculate tomogram size check params")
+            self.label_recTomoSizeBinApp.setStyleSheet("color: red;font-weight: bold") 
+        
         
     def setEerFractionsToJobTap(self):
         
@@ -1907,7 +1968,7 @@ class MainUI(QMainWindow):
         if self.cbdat.pipeRunner.checkForLock():
             messageBox("lock exists","stop workflow first")
             return
-        print(self.cbdat.pipeRunner.getCurrentNodeScheme())
+        print("starting from: " + self.cbdat.pipeRunner.getCurrentNodeScheme())
         
         #check for input
         #if self.cbdat.projectpath:
@@ -2228,7 +2289,7 @@ class MainUI(QMainWindow):
         Returns:
             Scheme: The updated scheme object.
         """
-        
+        active_tab_index = self.tabWidget.currentIndex()
         for job_tab_index in range(1, len(scheme.jobs_in_scheme) + 1):
             job_name = scheme.jobs_in_scheme[job_tab_index]
             tab_index = self.find_tab_index_by_name(job_name)
@@ -2243,7 +2304,9 @@ class MainUI(QMainWindow):
                                                                    table_widget,jobName,self.cbdat.conf)
 
             
-        tabWidget.setCurrentIndex(len(self.cbdat.scheme.jobs_in_scheme) + self.jobTapNrSetUpTaps)
+        #tabWidget.setCurrentIndex(len(self.cbdat.scheme.jobs_in_scheme) + self.jobTapNrSetUpTaps)
+        tabWidget.setCurrentIndex(active_tab_index)
+        
         return scheme    
     
     def updateSchemeJobFromTable(self,job, table_widget, jobName, conf):

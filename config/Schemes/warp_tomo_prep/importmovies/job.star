@@ -20,7 +20,7 @@ images_are_motion_corrected         No
 mdoc_files ./mdoc/*.mdoc 
 optics_group_name         "" 
 prefix         "" 
-angpix       2.93 
+angpix       2.95 
 kV        300 
 Cs        2.7 
 Q0        0.1 

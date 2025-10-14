@@ -26,6 +26,7 @@ Install dependencies
    pip install --force-reinstall numpy==1.26.3
    pip3 install pyqt6==6.7.0
    pip install starfile
+   pip install termcolor
    pip install biopython
    conda install -c conda-forge pymol-open-source
    conda install conda-forge::timm
