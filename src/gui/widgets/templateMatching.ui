@@ -54,7 +54,7 @@
       <rect>
        <x>90</x>
        <y>30</y>
-       <width>431</width>
+       <width>401</width>
        <height>25</height>
       </rect>
      </property>
@@ -65,7 +65,7 @@
     <widget class="QPushButton" name="btn_browse_tm_template_volume">
      <property name="geometry">
       <rect>
-       <x>520</x>
+       <x>494</x>
        <y>30</y>
        <width>71</width>
        <height>25</height>
@@ -93,7 +93,7 @@
       <rect>
        <x>90</x>
        <y>60</y>
-       <width>430</width>
+       <width>401</width>
        <height>25</height>
       </rect>
      </property>
@@ -104,7 +104,7 @@
     <widget class="QPushButton" name="btn_browse_tm_template_volumeMask">
      <property name="geometry">
       <rect>
-       <x>520</x>
+       <x>494</x>
        <y>60</y>
        <width>71</width>
        <height>25</height>
@@ -130,8 +130,8 @@
     <widget class="QLabel" name="label_55">
      <property name="geometry">
       <rect>
-       <x>710</x>
-       <y>30</y>
+       <x>671</x>
+       <y>25</y>
        <width>31</width>
        <height>30</height>
       </rect>
@@ -143,8 +143,8 @@
     <widget class="QLineEdit" name="line_path_tm_template_volumeSym">
      <property name="geometry">
       <rect>
-       <x>746</x>
-       <y>33</y>
+       <x>703</x>
+       <y>28</y>
        <width>21</width>
        <height>25</height>
       </rect>
@@ -182,7 +182,7 @@
     <widget class="QPushButton" name="btn_generate_tm_template_volume">
      <property name="geometry">
       <rect>
-       <x>590</x>
+       <x>564</x>
        <y>30</y>
        <width>61</width>
        <height>25</height>
@@ -195,7 +195,7 @@
     <widget class="QPushButton" name="btn_generate_tm_template_volumeMask">
      <property name="geometry">
       <rect>
-       <x>590</x>
+       <x>564</x>
        <y>60</y>
        <width>61</width>
        <height>25</height>
@@ -208,7 +208,7 @@
     <widget class="QPushButton" name="btn_view_tm_template_volume">
      <property name="geometry">
       <rect>
-       <x>652</x>
+       <x>626</x>
        <y>30</y>
        <width>40</width>
        <height>25</height>
@@ -221,7 +221,7 @@
     <widget class="QPushButton" name="btn_view_tm_template_volumeMask">
      <property name="geometry">
       <rect>
-       <x>653</x>
+       <x>627</x>
        <y>60</y>
        <width>40</width>
        <height>25</height>
@@ -234,19 +234,65 @@
     <widget class="QCheckBox" name="chkbox_tm_template_volumeMaskNonSph">
      <property name="geometry">
       <rect>
-       <x>700</x>
-       <y>60</y>
-       <width>121</width>
-       <height>23</height>
+       <x>669</x>
+       <y>56</y>
+       <width>81</width>
+       <height>31</height>
       </rect>
      </property>
      <property name="text">
-      <string>Non Sph. Mask</string>
+      <string>Non Sph. 
+Mask</string>
      </property>
      <property name="checked">
       <bool>true</bool>
      </property>
      <property name="tristate">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_56">
+     <property name="geometry">
+      <rect>
+       <x>760</x>
+       <y>22</y>
+       <width>61</width>
+       <height>30</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Visualize:</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_tm_visImod">
+     <property name="geometry">
+      <rect>
+       <x>760</x>
+       <y>41</y>
+       <width>71</width>
+       <height>30</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Imod</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_tm_visChimera">
+     <property name="geometry">
+      <rect>
+       <x>760</x>
+       <y>61</y>
+       <width>71</width>
+       <height>30</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Chimera</string>
+     </property>
+     <property name="checked">
       <bool>false</bool>
      </property>
     </widget>

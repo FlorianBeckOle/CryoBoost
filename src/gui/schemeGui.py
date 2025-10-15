@@ -998,7 +998,12 @@ class MainUI(QMainWindow):
         """
         widget = self.tabWidget.currentWidget()
         text_field = widget.findChild(QLineEdit, "line_path_tm_template_volumeMask") 
-        self.viewVolume(text_field.text())    
+        text_fieldTemplate = widget.findChild(QLineEdit, "line_path_tm_template_volume") 
+        if os.path.exists(text_fieldTemplate.text()) and os.path.isfile(text_fieldTemplate.text()):
+            vol2=(text_fieldTemplate.text())
+        else:
+            vol2=None          
+        self.viewVolume(text_field.text(),vol2)    
     
     def viewTmVolumeTemplate(self):
         """
@@ -1169,6 +1174,8 @@ class MainUI(QMainWindow):
         "LowPass": str(lowpass)
          }
         dialog = MultiInputDialog(fields)
+       
+        jobTag=self.getTagFromCurrentTab()
         if dialog.exec() == QDialog.DialogCode.Accepted:
             val = dialog.getInputs()
             msg=statusMessageBox("Generating Mask")
@@ -1181,12 +1188,17 @@ class MainUI(QMainWindow):
                           threads=20,
                           envStr=self.cbdat.localEnv,
                            )
+            params_dict = {"in_mask":os.path.abspath(maskName) }
             with QSignalBlocker(text_field):
                 text_field.setText(val["MaskPath"])
-            params_dict = {"in_mask":os.path.abspath(maskName) }
-            jobTag=self.getTagFromCurrentTab()
             self.setParamsDictToJobTap(params_dict,["templatematching"+jobTag])
             msg.close()
+        else:
+            params_dict = {"in_mask":"None" }
+            self.setParamsDictToJobTap(params_dict,["templatematching"+jobTag])
+            with QSignalBlocker(text_field):
+                text_field.setText("None")
+                
     def setTmVolumeTemplateSymToJobTap(self):
         
         widget = self.tabWidget.currentWidget()
@@ -1201,10 +1213,29 @@ class MainUI(QMainWindow):
         self.setParamsDictToJobTap(params_dict,["templatematching"+jobTag])
     
         
-    def viewVolume(self,volume):
-        os.system(self.cbdat.localEnv + " imod " + volume)
-        os.system(self.cbdat.localEnv + " chimera " + volume) 
-       
+    def viewVolume(self,volume,volume2=None):
+        
+        widget = self.tabWidget.currentWidget()
+        chkBoxImod = widget.findChild(QCheckBox, "checkBox_tm_visImod")
+        chkBoxChimera = widget.findChild(QCheckBox, "checkBox_tm_visChimera")
+        if volume2 is None:
+            volume2=""
+        else:
+            volume2=" " + volume2   
+        if chkBoxImod.isChecked():
+            os.system(self.cbdat.localEnv + " imod " + volume + volume2)
+        if chkBoxChimera.isChecked():
+            volume=volume.replace("_black.mrc","_white.mrc")
+            volume2=volume2.replace("_black.mrc","_white.mrc")
+            if "_mask.mrc" in volume:
+                call=self.cbdat.localEnv + 'ChimeraX --cmd "open ' +  volume + ';volume #1 style mesh;open ' + volume2 + '"'  
+            else:
+                call=self.cbdat.localEnv + "ChimeraX " + volume + " " + volume2  
+            print(call)
+            os.system(call)
+            #os.system(self.cbdat.localEnv + " chimera " + volume + volume2)
+            
+            
     def setTmVolumeTemplateToJobTap(self):
         """
         Sets the path to movies in the importmovies job to the link provided in the line_path_movies field.

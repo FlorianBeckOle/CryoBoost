@@ -11,7 +11,7 @@ submission:
     Helpssh: c-wing-wiki.biochem.mpg.de/wiki/index.php/Ssh-keygen
     HelpConflict: "rmove relion/python from your .bashrc hpcl8 or global section"
 local:
-    Environment: "source /fs/pool/pool-fbeck/projects/4TomoPipe/rel5Pipe/src/CryoBoost/.cbenv;module purge;module load RELION/5.0-beta-3; module load WARP/2.0.0dev29; module load IMOD; module load CHIMERA; module load PYMOL; module load CISTEM"
+    Environment: "source /fs/pool/pool-fbeck/projects/4TomoPipe/rel5Pipe/src/CryoBoost/.cbenv;module purge;module load RELION/5.0-beta-3; module load WARP/2.0.0dev29; module load IMOD; module load CHIMERAX/1.9.1; module load PYMOL; module load CISTEM"
 
 aliases:
   - Job: all
